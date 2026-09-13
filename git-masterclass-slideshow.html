@@ -1,0 +1,1219 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Git do Zero — Master Class Interativa</title>
+  <style>
+    :root {
+      --ink: #e9eef7;
+      --muted: #a7b3c8;
+      --paper: #0b1120;
+      --panel: #111b2e;
+      --panel-2: #17233a;
+      --line: #2a3a56;
+      --accent: #9ee37d;
+      --accent-2: #78d4ff;
+      --warning: #ffd166;
+      --danger: #ff8c8c;
+      --shadow: 0 22px 70px rgba(0, 0, 0, .32);
+      --radius: 18px;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(120, 212, 255, .10), transparent 32rem),
+        radial-gradient(circle at 90% 10%, rgba(158, 227, 125, .08), transparent 28rem),
+        var(--paper);
+      font-family: var(--sans);
+      line-height: 1.55;
+    }
+    body.present-mode { overflow: hidden; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+      outline: 3px solid var(--accent-2);
+      outline-offset: 3px;
+    }
+    a { color: var(--accent-2); }
+    code, pre { font-family: var(--mono); }
+    code {
+      color: #d8f6c8;
+      background: rgba(158, 227, 125, .10);
+      border: 1px solid rgba(158, 227, 125, .18);
+      border-radius: 5px;
+      padding: .10em .30em;
+      overflow-wrap: anywhere;
+    }
+
+    .app-chrome {
+      position: sticky;
+      z-index: 10;
+      top: 0;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 1.25rem;
+      min-height: 70px;
+      padding: .85rem 4vw;
+      background: rgba(11, 17, 32, .88);
+      border-bottom: 1px solid rgba(167, 179, 200, .14);
+      backdrop-filter: blur(16px);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      white-space: nowrap;
+    }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      color: var(--paper);
+      background: var(--accent);
+      border-radius: 10px;
+      font-family: var(--mono);
+      font-weight: 900;
+    }
+    .progress-wrap { min-width: 0; }
+    .progress-track {
+      height: 8px;
+      overflow: hidden;
+      background: #1c2940;
+      border-radius: 999px;
+    }
+    #progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-2), var(--accent));
+      transition: width .25s ease;
+    }
+    #progress-label {
+      display: block;
+      margin-top: .25rem;
+      color: var(--muted);
+      font-size: .76rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .chrome-actions, .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+    }
+    .icon-btn, .nav-btn, .mode-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      padding: .48rem .75rem;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .04);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    .icon-btn:hover, .nav-btn:hover, .mode-btn:hover { border-color: var(--accent-2); }
+    .mode-btn[aria-pressed="true"] {
+      color: var(--paper);
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    main { width: min(1220px, 92vw); margin: 0 auto; }
+    .slide {
+      display: block;
+      min-height: calc(100vh - 70px);
+      padding: 5.5rem 0 6rem;
+      scroll-margin-top: 80px;
+    }
+    .js-enabled .slide { display: none; }
+    .js-enabled .slide.is-active { display: block; }
+    .slide-inner { max-width: 1080px; margin: 0 auto; }
+    .kicker {
+      margin: 0 0 .8rem;
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3, h4 { line-height: 1.08; letter-spacing: -.045em; }
+    h1 { max-width: 900px; margin: 0; font-size: clamp(3rem, 8vw, 7rem); }
+    h2 { margin: 0 0 1rem; font-size: clamp(2.2rem, 5vw, 4.7rem); }
+    h3 { margin: 0 0 .65rem; font-size: 1.25rem; }
+    h4 { margin: 0 0 .45rem; font-size: 1rem; letter-spacing: -.015em; }
+    .lead {
+      max-width: 780px;
+      margin: 1.4rem 0 0;
+      color: var(--muted);
+      font-size: clamp(1.05rem, 2vw, 1.35rem);
+    }
+    .hero-grid, .two-col, .lesson-grid, .metric-grid {
+      display: grid;
+      gap: 1rem;
+    }
+    .hero-grid { grid-template-columns: 1.35fr .65fr; align-items: end; }
+    .two-col { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 2rem; }
+    .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 2rem; }
+    .panel, .metric, .callout, .command-card, .source-card {
+      background: linear-gradient(145deg, rgba(23, 35, 58, .92), rgba(17, 27, 46, .92));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .panel, .callout, .source-card { padding: 1.25rem; }
+    .panel p:last-child, .callout p:last-child { margin-bottom: 0; }
+    .metric { padding: 1rem; }
+    .metric strong {
+      display: block;
+      color: var(--accent);
+      font-size: 2rem;
+      line-height: 1;
+    }
+    .metric span { display: block; margin-top: .45rem; color: var(--muted); font-size: .9rem; }
+    .tag {
+      display: inline-block;
+      margin: .2rem .25rem .2rem 0;
+      padding: .25rem .5rem;
+      color: var(--accent-2);
+      background: rgba(120, 212, 255, .08);
+      border: 1px solid rgba(120, 212, 255, .25);
+      border-radius: 999px;
+      font-size: .75rem;
+      font-weight: 750;
+    }
+    .tag.warning { color: var(--warning); border-color: rgba(255, 209, 102, .32); background: rgba(255, 209, 102, .08); }
+    .tag.danger { color: var(--danger); border-color: rgba(255, 140, 140, .32); background: rgba(255, 140, 140, .08); }
+    .quote {
+      margin: 2rem 0 0;
+      padding: 1.25rem 1.5rem;
+      color: #eaffdf;
+      background: rgba(158, 227, 125, .08);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 12px 12px 0;
+      font-size: 1.12rem;
+    }
+    .terminal {
+      overflow: hidden;
+      margin-top: 1rem;
+      background: #050913;
+      border: 1px solid #253552;
+      border-radius: 14px;
+    }
+    .terminal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .7rem;
+      padding: .65rem .8rem;
+      color: var(--muted);
+      background: #0d1728;
+      border-bottom: 1px solid #253552;
+      font-size: .78rem;
+    }
+    .terminal-dots { display: flex; gap: .35rem; }
+    .terminal-dots i { width: 9px; height: 9px; border-radius: 50%; background: #ff7b72; }
+    .terminal-dots i:nth-child(2) { background: #ffd166; }
+    .terminal-dots i:nth-child(3) { background: #9ee37d; }
+    pre {
+      margin: 0;
+      padding: 1rem;
+      overflow-x: auto;
+      color: #dce7fa;
+      font-size: .88rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .copy-btn {
+      padding: .3rem .55rem;
+      color: var(--accent-2);
+      background: transparent;
+      border: 1px solid #314667;
+      border-radius: 7px;
+      font-size: .75rem;
+    }
+    .copy-btn:hover { color: var(--paper); background: var(--accent-2); }
+    .exercise {
+      margin-top: 1.35rem;
+      padding: 1rem 1.1rem;
+      background: rgba(120, 212, 255, .06);
+      border: 1px solid rgba(120, 212, 255, .25);
+      border-radius: 14px;
+    }
+    .exercise-label, .answer-label {
+      color: var(--accent-2);
+      font-family: var(--mono);
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .answer-toggle {
+      margin-top: .75rem;
+      padding: .45rem .7rem;
+      color: var(--accent);
+      background: transparent;
+      border: 1px solid rgba(158, 227, 125, .35);
+      border-radius: 8px;
+      font-size: .8rem;
+    }
+    .answer-panel {
+      margin-top: .8rem;
+      padding: .8rem;
+      color: #d7e8cc;
+      background: rgba(158, 227, 125, .08);
+      border-radius: 10px;
+    }
+    .answer-panel[hidden] { display: none; }
+    .instructor-note {
+      margin-top: 1rem;
+      padding: .8rem 1rem;
+      color: #e9d79e;
+      background: rgba(255, 209, 102, .08);
+      border: 1px solid rgba(255, 209, 102, .22);
+      border-radius: 10px;
+      font-size: .88rem;
+    }
+    .command-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin-top: 1.8rem;
+    }
+    .command-card {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      padding: 1rem;
+      box-shadow: none;
+    }
+    .command-card[data-danger="high"] { border-color: rgba(255, 140, 140, .34); }
+    .command-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: .8rem;
+    }
+    .command-card h3 { color: #f4f7fc; font-size: 1rem; letter-spacing: -.02em; }
+    .syntax {
+      display: block;
+      margin: .55rem 0;
+      color: #d7e8cc;
+      font-family: var(--mono);
+      font-size: .78rem;
+      overflow-wrap: anywhere;
+    }
+    .example-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: .5rem;
+      padding: .65rem;
+      background: #091221;
+      border: 1px solid #263954;
+      border-radius: 9px;
+    }
+    .example-row code {
+      padding: 0;
+      color: #dce7fa;
+      background: transparent;
+      border: 0;
+      font-size: .78rem;
+    }
+    .command-card p { margin: .65rem 0 0; color: var(--muted); font-size: .9rem; }
+    .command-card .exercise { margin-top: .85rem; }
+    .command-card .answer-toggle { align-self: flex-start; }
+    .command-card .answer-panel { font-size: .86rem; }
+    .coverage-toolbar {
+      display: flex;
+      align-items: center;
+      gap: .8rem;
+      margin: 1.5rem 0 1rem;
+    }
+    #command-filter {
+      width: min(600px, 100%);
+      padding: .75rem .9rem;
+      color: var(--ink);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    #coverage-count { color: var(--muted); font-size: .85rem; }
+    .coverage-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .65rem;
+    }
+    .coverage-item {
+      display: block;
+      min-width: 0;
+      padding: .75rem;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .035);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      text-decoration: none;
+    }
+    .coverage-item:hover { border-color: var(--accent-2); }
+    .coverage-item code { display: block; margin-bottom: .35rem; font-size: .73rem; }
+    .coverage-item small { color: var(--muted); }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: .65rem;
+      margin: 2rem 0;
+    }
+    .flow-step {
+      position: relative;
+      padding: 1rem .8rem;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      text-align: center;
+    }
+    .flow-step:not(:last-child)::after {
+      position: absolute;
+      content: "→";
+      top: 50%;
+      right: -.65rem;
+      color: var(--accent);
+      transform: translateY(-50%);
+    }
+    .flow-step strong { display: block; color: var(--accent); }
+    .flow-step span { display: block; margin-top: .25rem; color: var(--muted); font-size: .78rem; }
+    .table-wrap { overflow-x: auto; margin-top: 1.4rem; }
+    table { width: 100%; min-width: 640px; border-collapse: collapse; }
+    th, td { padding: .75rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--accent); font-size: .78rem; letter-spacing: .07em; text-transform: uppercase; }
+    td { color: var(--muted); }
+    td:first-child { color: var(--ink); }
+    .source-list { display: grid; gap: .75rem; margin-top: 1.2rem; }
+    .source-card { box-shadow: none; }
+    .source-card strong { display: block; margin-bottom: .25rem; color: var(--ink); }
+    .slide-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-top: 3rem;
+      color: var(--muted);
+      font-size: .8rem;
+    }
+    .slide-nav {
+      position: fixed;
+      z-index: 9;
+      right: 1rem;
+      bottom: 1rem;
+      display: flex;
+      gap: .35rem;
+      max-width: 70vw;
+      overflow-x: auto;
+      padding: .35rem;
+      background: rgba(11, 17, 32, .86);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      backdrop-filter: blur(14px);
+    }
+    .dot {
+      width: 9px;
+      height: 9px;
+      flex: 0 0 auto;
+      padding: 0;
+      background: #52627b;
+      border: 0;
+      border-radius: 50%;
+    }
+    .dot[aria-current="true"] { width: 25px; background: var(--accent); border-radius: 99px; }
+    .deck-nav {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-top: 2.5rem;
+    }
+    .nav-btn.primary { color: var(--paper); background: var(--accent); border-color: var(--accent); font-weight: 800; }
+    .nav-btn:disabled { cursor: not-allowed; opacity: .35; }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    #help-panel {
+      position: fixed;
+      z-index: 20;
+      inset: 50% auto auto 50%;
+      width: min(500px, 88vw);
+      padding: 1.35rem;
+      color: var(--ink);
+      background: var(--panel-2);
+      border: 1px solid var(--accent-2);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      transform: translate(-50%, -50%);
+    }
+    #help-panel[hidden] { display: none; }
+    .backdrop {
+      position: fixed;
+      z-index: 19;
+      inset: 0;
+      background: rgba(0, 0, 0, .65);
+    }
+    .backdrop[hidden] { display: none; }
+    .present-mode .app-chrome, .present-mode .slide-nav { display: none; }
+    .present-mode main { width: min(1280px, 94vw); }
+    .present-mode .slide { min-height: 100vh; padding-top: 8vh; }
+    .print-preview .slide-nav, .print-preview .app-chrome { display: none; }
+
+    @media (max-width: 800px) {
+      .app-chrome { grid-template-columns: 1fr auto; }
+      .progress-wrap { grid-column: 1 / -1; grid-row: 2; }
+      .chrome-actions { justify-content: flex-end; }
+      .hero-grid, .two-col, .command-grid, .metric-grid { grid-template-columns: 1fr; }
+      .coverage-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .flow { grid-template-columns: 1fr; }
+      .flow-step:not(:last-child)::after { content: "↓"; top: auto; right: 50%; bottom: -.8rem; transform: translateX(50%); }
+      .slide { padding-top: 3.5rem; }
+      h1 { font-size: clamp(2.8rem, 14vw, 5rem); }
+    }
+    @media (max-width: 500px) {
+      .coverage-list { grid-template-columns: 1fr; }
+      .app-chrome { padding-inline: 1rem; }
+      main { width: min(94vw, 1220px); }
+    }
+
+    @media print {
+      @page { margin: 12mm; }
+      :root {
+        --ink: #111;
+        --muted: #444;
+        --paper: #fff;
+        --panel: #fff;
+        --panel-2: #fff;
+        --line: #999;
+        --accent: #135b2b;
+        --accent-2: #004b73;
+        --warning: #795900;
+        --danger: #8b0000;
+        --shadow: none;
+      }
+      body {
+        color: #111;
+        background: #fff;
+        font-size: 10pt;
+      }
+      .app-chrome, .slide-nav, .deck-nav, .copy-btn, .answer-toggle,
+      .coverage-toolbar, #help-panel, .backdrop, .instructor-note, .slide-footer { display: none !important; }
+      main { width: 100%; }
+      .slide, .js-enabled .slide, .js-enabled .slide.is-active {
+        display: block !important;
+        min-height: 0;
+        padding: 14mm 0 12mm;
+        page-break-after: always;
+        break-after: page;
+      }
+      .slide:last-child { page-break-after: auto; break-after: auto; }
+      .panel, .metric, .callout, .command-card, .source-card {
+        color: #111;
+        background: #fff;
+        border: 1px solid #999;
+        box-shadow: none;
+      }
+      .command-card { break-inside: avoid; page-break-inside: avoid; }
+      .command-grid { grid-template-columns: 1fr 1fr; gap: 5mm; }
+      .coverage-list { grid-template-columns: repeat(3, 1fr); }
+      .coverage-item { color: #111; border-color: #aaa; }
+      .coverage-item code, code { color: #111; background: #eee; border-color: #aaa; }
+      pre { color: #111; background: #f4f4f4; border: 1px solid #aaa; }
+      .terminal { background: #fff; border-color: #888; }
+      .terminal-head { color: #222; background: #eee; border-color: #aaa; }
+      .example-row { background: #f4f4f4; border-color: #aaa; }
+      .example-row code { color: #111; }
+      .command-card h3 { color: #111; }
+      .command-card .syntax { color: #135b2b; }
+      .command-card p { color: #444; }
+      .answer-panel, .answer-panel[hidden] {
+        display: block !important;
+        color: #111;
+        background: #f5f5f5;
+        border: 1px solid #999;
+      }
+      a { color: #004b73; }
+      .flow-step { background: #fff; border-color: #999; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-chrome" aria-label="Controles da apresentação">
+    <div class="brand"><span class="brand-mark">git</span><span>Git do Zero</span></div>
+    <div class="progress-wrap">
+      <div class="progress-track" aria-hidden="true"><div id="progress-bar"></div></div>
+      <span id="progress-label" role="status" aria-live="polite">Slide 1</span>
+    </div>
+    <div class="chrome-actions">
+      <button class="icon-btn" id="prev-btn" type="button" aria-label="Slide anterior">←</button>
+      <button class="icon-btn" id="next-btn" type="button" aria-label="Próximo slide">→</button>
+      <button class="icon-btn" id="help-btn" type="button" aria-label="Abrir ajuda de teclado">?</button>
+      <button class="mode-btn" id="print-btn" type="button" aria-pressed="false">Imprimir</button>
+      <button class="mode-btn" id="present-btn" type="button" aria-pressed="false">Apresentar</button>
+    </div>
+  </header>
+
+  <div class="backdrop" id="backdrop" hidden></div>
+  <aside id="help-panel" hidden aria-labelledby="help-title">
+    <h2 id="help-title">Atalhos</h2>
+    <p><code>←</code> <code>→</code> navegam. <code>Home</code>/<code>End</code> vão ao início/fim. <code>?</code> abre ajuda. <code>P</code> alterna impressão. <code>Esc</code> sai do modo apresentação.</p>
+    <button class="nav-btn primary" id="close-help" type="button">Fechar</button>
+  </aside>
+
+  <main id="deck">
+    <section class="slide is-active" id="slide-capa" tabindex="-1" aria-labelledby="title-capa">
+      <div class="slide-inner">
+        <div class="hero-grid">
+          <div>
+            <p class="kicker">Master class interativa · Git para iniciantes</p>
+            <h1 id="title-capa">Git sem medo.</h1>
+            <p class="lead">Uma aula prática para entender estado, histórico, branches, conflitos, stash e colaboração — comando por comando.</p>
+          </div>
+          <div class="panel">
+            <span class="tag">offline</span>
+            <span class="tag">keyboard-first</span>
+            <span class="tag">print-ready</span>
+            <p><strong>Como usar</strong></p>
+            <p>Avance pelos slides. Em cada card, execute exemplo em repositório descartável, depois revele resultado esperado.</p>
+          </div>
+        </div>
+        <div class="metric-grid">
+          <div class="metric"><strong id="command-count">74</strong><span>comandos catalogados</span></div>
+          <div class="metric"><strong>1</strong><span>exercício por comando</span></div>
+          <div class="metric"><strong>0</strong><span>dependências externas</span></div>
+        </div>
+        <div class="quote">Regra de ouro: antes de perguntar “qual comando?”, pergunte “em que estado está meu trabalho?”. Rode <code>git status</code>.</div>
+        <div class="slide-footer"><span>Use ← → para navegar</span><span>1 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-mapa" tabindex="-1" aria-labelledby="title-mapa">
+      <div class="slide-inner">
+        <p class="kicker">01 · modelo mental</p>
+        <h2 id="title-mapa">Git guarda snapshots locais.</h2>
+        <p class="lead">Git não é GitHub. Git registra histórico no computador; GitHub é uma hospedagem e camada de colaboração.</p>
+        <div class="flow" aria-label="Fluxo de trabalho Git">
+          <div class="flow-step"><strong>Editar</strong><span>working tree</span></div>
+          <div class="flow-step"><strong>git add</strong><span>staging area</span></div>
+          <div class="flow-step"><strong>git commit</strong><span>histórico local</span></div>
+          <div class="flow-step"><strong>git push</strong><span>enviar</span></div>
+          <div class="flow-step"><strong>git pull</strong><span>receber + integrar</span></div>
+        </div>
+        <div class="two-col">
+          <div class="panel"><h3>Três lugares</h3><p><strong>Working tree:</strong> arquivos editáveis.</p><p><strong>Staging:</strong> conteúdo selecionado para próximo commit.</p><p><strong>Repository:</strong> snapshots já salvos em <code>.git</code>.</p></div>
+          <div class="panel"><h3>Três perguntas</h3><p><code>git status</code> — onde estou?</p><p><code>git diff</code> — o que mudou?</p><p><code>git diff --staged</code> — o que será salvo?</p></div>
+        </div>
+        <div class="exercise"><span class="exercise-label">Exercício relâmpago</span><p>Explique para colega por que <code>git add</code> não envia código para GitHub.</p><button class="answer-toggle" type="button" aria-expanded="false" aria-controls="answer-mapa">Revelar resposta</button><div class="answer-panel" id="answer-mapa" hidden><strong>Resposta:</strong> <code>git add</code> só move conteúdo para staging local. <code>git commit</code> salva localmente. <code>git push</code> envia ao remote.</div></div>
+        <div class="slide-footer"><span>Snapshot, não “salvamento mágico”</span><span>2 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-fundamentos" tabindex="-1" aria-labelledby="title-fundamentos">
+      <div class="slide-inner">
+        <p class="kicker">02 · começar e preparar</p>
+        <h2 id="title-fundamentos">Comece pequeno. Verifique estado.</h2>
+        <p class="lead">Cards abaixo cobrem inicialização, clone, staging, movimentação, remoção e identidade de arquivos.</p>
+          <div class="panel">
+            <h3>Pré-requisito descartável</h3>
+            <p>Use pasta <code>class-git-demo</code>. Para PowerShell, crie arquivos no editor; para Bash/Git Bash/macOS/Linux, use comandos exibidos nos cards.</p>
+            <div class="terminal"><div class="terminal-head"><span class="terminal-dots"><i></i><i></i><i></i></span><span>setup</span><button class="copy-btn" type="button" data-copy="mkdir class-git-demo && cd class-git-demo && git init -b main">Copiar</button></div><pre>mkdir class-git-demo
+cd class-git-demo
+git init -b main</pre></div>
+            <p><strong>PowerShell:</strong> <code>New-Item -ItemType Directory class-git-demo</code> · <code>Set-Location class-git-demo</code> · rode <code>git init -b main</code>.</p>
+          </div>
+        <div class="command-grid" data-command-group="fundamentos"></div>
+        <div class="slide-footer"><span>Execute um card, rode status, explique resultado</span><span>3 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-snapshot" tabindex="-1" aria-labelledby="title-snapshot">
+      <div class="slide-inner">
+        <p class="kicker">03 · commits</p>
+        <h2 id="title-snapshot">Commit é checkpoint.</h2>
+        <p class="lead">Commit pequeno cria recuperação, revisão e contexto. Staging permite escolher exatamente o que entra.</p>
+        <div class="two-col">
+          <div class="panel">
+            <h3>Rotina</h3>
+            <div class="terminal"><div class="terminal-head"><span class="terminal-dots"><i></i><i></i><i></i></span><span>daily loop</span><button class="copy-btn" type="button" data-copy="git status\ngit diff\ngit add README.md\ngit diff --staged\ngit commit -m 'Explain README'">Copiar</button></div><pre>git status
+git diff
+git add README.md
+git diff --staged
+git commit -m 'Explain README'</pre></div>
+          </div>
+          <div class="panel">
+            <h3>Teste de compreensão</h3>
+            <p>Edite <code>README.md</code> e crie <code>notes.md</code>. Stage apenas README. Mostre diferenças staged e unstaged antes de commit.</p>
+            <p class="tag">mensagem: verbo + mudança</p>
+            <p class="tag">não: changes / stuff</p>
+          </div>
+        </div>
+        <div class="command-grid" data-command-group="snapshot"></div>
+        <div class="slide-footer"><span>Inspecione antes de salvar</span><span>4 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-branches" tabindex="-1" aria-labelledby="title-branches">
+      <div class="slide-inner">
+        <p class="kicker">04 · branches</p>
+        <h2 id="title-branches">Branch isola trabalho.</h2>
+        <p class="lead">Branch é nome móvel apontando para commit. Confirme branch atual antes de mergear.</p>
+        <div class="terminal"><div class="terminal-head"><span class="terminal-dots"><i></i><i></i><i></i></span><span>feature workflow</span><button class="copy-btn" type="button" data-copy="git switch main\ngit switch -c feature/demo\n# editar e testar\ngit add README.md\ngit commit -m 'Add demo feature'\ngit switch main\ngit merge feature/demo\ngit branch -d feature/demo">Copiar</button></div><pre>git switch main
+git switch -c feature/demo
+# editar e testar
+git add README.md
+git commit -m 'Add demo feature'
+git switch main
+git merge feature/demo
+git branch -d feature/demo</pre></div>
+        <div class="command-grid" data-command-group="branches"></div>
+        <div class="slide-footer"><span>Destino de merge = branch atual</span><span>5 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-diff" tabindex="-1" aria-labelledby="title-diff">
+      <div class="slide-inner">
+        <p class="kicker">05 · comparar</p>
+        <h2 id="title-diff">Diff responde “o que mudou?”.</h2>
+        <p class="lead">Compare working tree, staging, commits, arquivos específicos e estatísticas.</p>
+        <div class="two-col">
+          <div class="panel"><h3>Mapa</h3><p><code>git diff</code>: não staged.</p><p><code>git diff --staged</code>: staged.</p><p><code>git diff HEAD</code>: tudo desde último commit.</p></div>
+          <div class="panel"><h3>Referências</h3><p><code>HEAD</code> = commit atual.</p><p><code>HEAD~1</code> = um commit antes.</p><p><code>main</code> = ponta local da branch.</p></div>
+        </div>
+        <div class="command-grid" data-command-group="diff"></div>
+        <div class="slide-footer"><span>Leia patch, não só nome de arquivo</span><span>6 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-conflito" tabindex="-1" aria-labelledby="title-conflito">
+      <div class="slide-inner">
+        <p class="kicker">06 · merge e conflito</p>
+        <h2 id="title-conflito">Conflito é pausa para decisão humana.</h2>
+        <p class="lead">Git não escolhe quando duas branches alteram mesmo trecho de formas incompatíveis.</p>
+        <div class="two-col">
+          <div class="panel">
+            <h3>Resolver</h3>
+            <ol><li><code>git status</code></li><li>abrir arquivo</li><li>escolher texto final</li><li>remover marcadores</li><li><code>git add arquivo</code></li><li><code>git commit</code></li></ol>
+          </div>
+          <div class="panel">
+            <h3>Abandonar merge</h3>
+            <p>Se decisão não está pronta:</p>
+            <div class="terminal"><div class="terminal-head"><span class="terminal-dots"><i></i><i></i><i></i></span><span>abort</span><button class="copy-btn" type="button" data-copy="git merge --abort">Copiar</button></div><pre>git merge --abort</pre></div>
+            <p class="tag warning">não apague arquivo para escapar</p>
+          </div>
+        </div>
+        <div class="command-grid" data-command-group="merge"></div>
+        <div class="slide-footer"><span>Conflito resolvido só após add + commit</span><span>7 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-stash" tabindex="-1" aria-labelledby="title-stash">
+      <div class="slide-inner">
+        <p class="kicker">07 · pausa temporária</p>
+        <h2 id="title-stash">Stash estaciona trabalho.</h2>
+        <p class="lead">Use quando precisa trocar branch com mudanças incompletas. Stash não substitui commit permanente.</p>
+        <div class="terminal"><div class="terminal-head"><span class="terminal-dots"><i></i><i></i><i></i></span><span>stash lifecycle</span><button class="copy-btn" type="button" data-copy="git stash\ngit stash list\ngit stash apply\ngit stash pop\ngit stash drop">Copiar</button></div><pre>git stash
+git stash list
+git stash apply
+git stash pop
+git stash drop</pre></div>
+        <div class="exercise"><span class="exercise-label">Exercício</span><p>Edite README sem commit. Rode <code>git stash</code>. Troque branch. Volte. Restaure com <code>git stash apply</code>. Compare apply e pop.</p><button class="answer-toggle" type="button" aria-expanded="false" aria-controls="answer-stash">Revelar resultado</button><div class="answer-panel" id="answer-stash" hidden><strong>Resultado:</strong> stash limpa working tree e guarda entrada. <code>apply</code> restaura e mantém entrada na lista. <code>pop</code> restaura e remove entrada se aplicação concluir. <code>drop</code> remove entrada sem restaurar.</div></div>
+        <div class="command-grid" data-command-group="stash"></div>
+        <div class="slide-footer"><span>Antes de stash: status. Depois: status.</span><span>8 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-undo" tabindex="-1" aria-labelledby="title-undo">
+      <div class="slide-inner">
+        <p class="kicker">08 · desfazer com segurança</p>
+        <h2 id="title-undo">Onde está o erro?</h2>
+        <p class="lead">Escolha comando pela camada: working tree, staging ou commit. Comandos destrutivos ficam em repositório descartável.</p>
+        <div class="table-wrap"><table><thead><tr><th>Estado</th><th>Comando</th><th>Efeito</th></tr></thead><tbody><tr><td>Editado, não staged</td><td><code>git restore arquivo</code></td><td>descarta edição local</td></tr><tr><td>Staged, não commit</td><td><code>git restore --staged arquivo</code></td><td>mantém edição, tira do próximo commit</td></tr><tr><td>Commit compartilhado</td><td><code>git revert commit</code></td><td>cria novo commit inverso</td></tr><tr><td>Merge em andamento</td><td><code>git merge --abort</code></td><td>retorna antes do merge</td></tr></tbody></table></div>
+        <div class="panel" style="margin-top:1rem"><span class="tag danger">instrutor-led</span> <code>git reset --hard</code>, <code>git clean</code> e force push podem apagar ou reescrever trabalho. Primeiro faça checkpoint ou use clone descartável.</div>
+        <div class="command-grid" data-command-group="undo"></div>
+        <div class="slide-footer"><span>Commits ajudam recuperar; uncommitted pode sumir</span><span>9 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-history" tabindex="-1" aria-labelledby="title-history">
+      <div class="slide-inner">
+        <p class="kicker">09 · arqueologia</p>
+        <h2 id="title-history">Histórico conta história.</h2>
+        <p class="lead">Use log para descobrir quando, onde e quem mudou algo. Use reflog como trilha local de recuperação.</p>
+        <div class="terminal"><div class="terminal-head"><span class="terminal-dots"><i></i><i></i><i></i></span><span>history</span><button class="copy-btn" type="button" data-copy="git log --oneline --graph --decorate --all\ngit log --follow README.md\ngit blame README.md">Copiar</button></div><pre>git log --oneline --graph --decorate --all
+git log --follow README.md
+git blame README.md</pre></div>
+        <div class="command-grid" data-command-group="history"></div>
+        <div class="slide-footer"><span>Não memorize hash: use referências</span><span>10 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-remote" tabindex="-1" aria-labelledby="title-remote">
+      <div class="slide-inner">
+        <p class="kicker">10 · remote</p>
+        <h2 id="title-remote">Compartilhar = push. Receber = fetch/pull.</h2>
+        <p class="lead">Remote pode ser GitHub ou um bare repository local. Aula usa local para evitar credencial e internet.</p>
+        <div class="terminal"><div class="terminal-head"><span class="terminal-dots"><i></i><i></i><i></i></span><span>remote lab</span><button class="copy-btn" type="button" data-copy="cd ..\ngit init --bare class-git-remote.git\ngit --git-dir=class-git-remote.git symbolic-ref HEAD refs/heads/main\ncd class-git-demo\ngit remote add origin ../class-git-remote.git\ngit push -u origin main">Copiar</button></div><pre>cd ..
+git init --bare class-git-remote.git
+git --git-dir=class-git-remote.git symbolic-ref HEAD refs/heads/main
+cd class-git-demo
+git remote add origin ../class-git-remote.git
+git push -u origin main</pre></div>
+        <div class="two-col">
+          <div class="panel"><h3>fetch</h3><p>Baixa informação e atualiza referências como <code>origin/main</code>. Não troca seus arquivos atuais.</p></div>
+          <div class="panel"><h3>pull</h3><p>Busca e integra. Neste curso, prefira <code>git pull --ff-only</code> quando local não divergiu.</p></div>
+        </div>
+        <div class="command-grid" data-command-group="remote"></div>
+        <div class="slide-footer"><span>Commit antes de pull</span><span>11 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-config" tabindex="-1" aria-labelledby="title-config">
+      <div class="slide-inner">
+        <p class="kicker">11 · configuração</p>
+        <h2 id="title-config">Configuração evita atrito.</h2>
+        <p class="lead">Identidade vai no commit. Aliases reduzem digitação. Arquivos de configuração têm escopos diferentes.</p>
+        <div class="two-col">
+          <div class="panel"><h3>Setup inicial</h3><div class="terminal"><div class="terminal-head"><span class="terminal-dots"><i></i><i></i><i></i></span><span>identity</span><button class="copy-btn" type="button" data-copy="git config --global user.name 'Seu Nome'\ngit config --global user.email 'voce@example.com'">Copiar</button></div><pre>git config --global user.name 'Seu Nome'
+git config --global user.email 'voce@example.com'</pre></div></div>
+          <div class="panel"><h3>Arquivos importantes</h3><p><code>.git/config</code> — repo atual.</p><p><code>~/.gitconfig</code> — global.</p><p><code>.gitignore</code> — padrões compartilhados de arquivos ignorados.</p></div>
+        </div>
+        <div class="command-grid" data-command-group="config"></div>
+        <div class="slide-footer"><span>Config global não é segredo</span><span>12 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-index" tabindex="-1" aria-labelledby="title-index">
+      <div class="slide-inner">
+        <p class="kicker">12 · catálogo</p>
+        <h2 id="title-index">Cada comando tem prática.</h2>
+        <p class="lead">Filtre por comando, clique para abrir lição. Exemplos usam nomes concretos e seguros; sintaxes genéricas ficam apenas como referência.</p>
+        <div class="coverage-toolbar">
+          <label class="sr-only" for="command-filter">Filtrar comandos</label>
+          <input id="command-filter" type="search" placeholder="Filtrar: stash, branch, diff..." autocomplete="off">
+          <span id="coverage-count" role="status" aria-live="polite"></span>
+        </div>
+        <div class="coverage-list" id="coverage-list"></div>
+        <div class="slide-footer"><span>Catálogo derivado de uma única lista canônica</span><span>13 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-fechamento" tabindex="-1" aria-labelledby="title-fechamento">
+      <div class="slide-inner">
+        <p class="kicker">13 · takeaway</p>
+        <h2 id="title-fechamento">Status. Diff. Add. Commit.</h2>
+        <p class="lead">Depois: branch, merge, push. Quando algo der errado: status primeiro.</p>
+        <div class="terminal"><div class="terminal-head"><span class="terminal-dots"><i></i><i></i><i></i></span><span>takeaway card</span><button class="copy-btn" type="button" data-copy="git status\ngit diff\ngit add README.md\ngit diff --staged\ngit commit -m 'Descrever mudança'\ngit switch -c feature/nome\ngit switch main\ngit merge feature/nome\ngit push -u origin feature/nome">Copiar</button></div><pre>git status
+git diff
+git add README.md
+git diff --staged
+git commit -m 'Descrever mudança'
+git switch -c feature/nome
+git switch main
+git merge feature/nome
+git push -u origin feature/nome</pre></div>
+        <div class="two-col">
+          <div class="panel"><h3>Take-home</h3><p>Crie projeto pequeno, faça 2 commits, use .gitignore, crie feature branch, faça merge, entregue log + status limpo.</p></div>
+          <div class="panel"><h3>Próxima aula</h3><p>Rebase, cherry-pick, tags, bisect, hooks e worktrees só depois de dominar estados e recuperação básica.</p></div>
+        </div>
+        <div class="quote">Git não exige memória perfeita. Exige inspeção disciplinada.</div>
+        <div class="source-list">
+          <div class="source-card"><strong>Fontes para continuar</strong><a href="https://git-scm.com/book/en/v2.html">Pro Git</a> · <a href="https://git-scm.com/cheat-sheet.pdf">Git Cheat Sheet</a> · <a href="https://docs.github.com/en/get-started/using-git/getting-changes-from-a-remote-repository">GitHub: remotes</a></div>
+        </div>
+        <div class="slide-footer"><span>Fim da aula</span><span>14 / 14</span></div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="slide-nav" id="slide-nav" aria-label="Navegação por slides"></nav>
+  <div class="sr-only" id="live-status" role="status" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      "use strict";
+      document.documentElement.classList.add("js-enabled");
+
+      function c(key, group, syntax, example, purpose, exercise, expected, danger, legacy) {
+        return { key, group, syntax, example, purpose, exercise, expected, danger: danger || "safe", legacy: !!legacy, supplemental: false };
+      }
+
+      const COMMANDS = [
+        c("git init", "fundamentos", "git init", "git init -b main", "Cria repositório Git em pasta existente.", "Em pasta vazia, inicialize branch main e confirme estado.", "Surge .git; nenhum arquivo é trackeado; status informa repositório sem commits."),
+        c("git clone <url>", "fundamentos", "git clone <url>", "git clone https://example.com/demo.git", "Copia repositório existente, histórico e remote origin.", "Clone um repositório de demonstração ou o bare remote local.", "Nova pasta contém histórico e origin configurado."),
+        c("git add <file>", "snapshot", "git add <file>", "git add README.md", "Coloca arquivo novo ou mudanças no staging.", "Edite README e stage somente ele.", "README aparece em Changes to be committed."),
+        c("git add .", "snapshot", "git add .", "git add .", "Stageia mudanças visíveis abaixo da pasta atual.", "Crie README e notes; rode add .; liste tudo staged.", "Todos os arquivos elegíveis entram no próximo commit; revise antes.", "warning"),
+        c("git add -p", "snapshot", "git add -p", "git add -p README.md", "Stageia pedaços selecionados de um arquivo.", "Faça duas alterações separadas e aceite somente primeiro hunk.", "Uma parte aparece em diff --staged; outra continua unstaged."),
+        c("git mv <old> <new>", "snapshot", "git mv <old> <new>", "git mv notes.md class-notes.md", "Move ou renomeia arquivo e registra operação.", "Renomeie notes.md e confira status.", "Status identifica rename; commit registra novo nome."),
+        c("git rm <file>", "snapshot", "git rm <file>", "git rm obsolete.md", "Remove arquivo do working tree e do próximo commit.", "Crie arquivo descartável, commit, remova com git rm.", "Arquivo sai do disco e aparece como deleted staged.", "warning"),
+        c("git rm --cached <file>", "snapshot", "git rm --cached <file>", "git rm --cached local.env", "Para de trackear arquivo, mantendo cópia local.", "Commit um arquivo local descartável; adicione padrão ao .gitignore; use rm --cached.", "Arquivo permanece no disco, mas deixa de ser trackeado.", "warning"),
+        c("git reset <file>", "snapshot", "git reset <file>", "git reset README.md", "Forma legada de tirar arquivo do staging sem apagar edição.", "Stage README e use reset README.", "README fica unstaged e conteúdo permanece.", "warning", true),
+        c("git reset", "snapshot", "git reset", "git reset", "Forma legada de tirar tudo do staging.", "Stage dois arquivos e remova seleção com reset.", "Arquivos permanecem editados/untracked; staging fica vazio.", "warning", true),
+        c("git status", "fundamentos", "git status", "git status", "Mostra branch, arquivos e estado de staging.", "Rode após cada mudança dos exercícios.", "Saída orienta próximo passo; use como diagnóstico principal."),
+        c("git commit", "snapshot", "git commit", "git commit -m 'Save checkpoint'", "Cria commit abrindo editor para mensagem.", "Stage README e crie commit sem -m; escreva mensagem no editor.", "Novo commit aparece no log; editor fecha com mensagem válida.", "safe"),
+        c("git commit -m 'message'", "snapshot", "git commit -m 'message'", "git commit -m 'Add README'", "Cria commit com mensagem na linha de comando.", "Stage mudança pequena e use mensagem específica.", "Commit criado; working tree fica limpo."),
+        c("git commit -am 'message'", "snapshot", "git commit -am 'message'", "git commit -am 'Fix README typo'", "Stageia e commita arquivos já trackeados; não inclui novos untracked.", "Edite arquivo trackeado e crie novo; rode -am e observe diferença.", "Edição trackeada entra; arquivo novo continua untracked.", "warning"),
+        c("git switch <name>", "branches", "git switch <name>", "git switch main", "Troca para branch existente.", "Crie feature, volte para main com switch.", "Arquivos mudam para snapshot da branch main.", "safe"),
+        c("git checkout <name>", "branches", "git checkout <name>", "git checkout main", "Forma legada de trocar branch.", "Repita troca para main usando checkout; compare com switch.", "Mesmo resultado para branch; prefira switch em aula nova.", "warning", true),
+        c("git switch -c <name>", "branches", "git switch -c <name>", "git switch -c feature/demo", "Cria e troca para branch nova.", "Partindo de main limpo, crie feature/demo.", "Branch nova aparece e vira branch atual."),
+        c("git checkout -b <name>", "branches", "git checkout -b <name>", "git checkout -b feature/legacy", "Forma legada para criar e trocar branch.", "Crie branch temporária e confirme com branch --show-current.", "Branch criada e selecionada; switch -c é forma moderna.", "warning", true),
+        c("git branch", "branches", "git branch", "git branch", "Lista branches locais e marca atual.", "Liste antes e depois de criar feature.", "Current branch recebe marcador *."),
+        c("git branch --sort=-committerdate", "branches", "git branch --sort=-committerdate", "git branch --sort=-committerdate", "Lista branches pela data de último commit.", "Crie dois branches e compare ordem após commits.", "Branch com commit mais recente aparece primeiro."),
+        c("git branch -d <name>", "branches", "git branch -d <name>", "git branch -d feature/demo", "Apaga branch local já mergeada.", "Merge feature em main e apague nome antigo.", "Branch removida; commits continuam acessíveis por main."),
+        c("git branch -D <name>", "branches", "git branch -D <name>", "git branch -D experiment/demo", "Força remoção de branch mesmo não mergeada.", "Em clone descartável, crie experimento e apague com -D.", "Nome some; trabalho exclusivo da branch pode ficar difícil de recuperar.", "danger"),
+        c("git diff HEAD", "diff", "git diff HEAD", "git diff HEAD", "Compara working tree + staging contra HEAD.", "Edite e stageie um arquivo; compare diff e diff HEAD.", "Mostra todas mudanças desde último commit."),
+        c("git diff --staged", "diff", "git diff --staged", "git diff --staged", "Mostra somente conteúdo staged para próximo commit.", "Stage uma alteração e revise patch.", "Patch contém somente alteração que commit salvaria."),
+        c("git diff", "diff", "git diff", "git diff", "Mostra mudanças não staged.", "Edite arquivo sem add e localize linha alterada.", "Patch aparece; após add, deixa de aparecer nesse comando."),
+        c("git show <commit>", "diff", "git show <commit>", "git show HEAD", "Mostra commit, metadados e patch.", "Inspecione último commit com show HEAD.", "Mensagem e linhas adicionadas/removidas aparecem."),
+        c("git diff <commit> <commit>", "diff", "git diff <commit> <commit>", "git diff HEAD~1 HEAD", "Compara snapshots de dois commits.", "Compare commit atual ao anterior.", "Patch mostra diferença entre snapshots."),
+        c("git diff <commit> <file>", "diff", "git diff <commit> <file>", "git diff HEAD~1 -- README.md", "Compara arquivo atual com versão de commit.", "Compare README atual ao commit anterior.", "Somente README aparece no patch."),
+        c("git diff <commit> --stat", "diff", "git diff <commit> --stat", "git diff HEAD~1 --stat", "Resume arquivos e contagem de linhas do diff.", "Veja estatística do último commit.", "Saída curta lista arquivos e inserções/remoções."),
+        c("git show <commit> --stat", "diff", "git show <commit> --stat", "git show HEAD --stat", "Mostra commit com resumo estatístico.", "Use no commit mais recente.", "Mensagem e resumo de arquivos aparecem."),
+        c("git restore <file>", "undo", "git restore <file>", "git restore README.md", "Descarta edição unstaged do arquivo.", "Faça edição temporária, confira diff, restaure.", "Arquivo volta ao conteúdo do index; edição não commitada some.", "danger"),
+        c("git checkout HEAD <file>", "undo", "git checkout HEAD <file>", "git checkout HEAD -- README.md", "Forma legada para restaurar arquivo desde HEAD.", "Em clone descartável, edite README e restaure.", "Edição local é descartada; prefira restore moderno.", "danger", true),
+        c("git restore --staged --worktree <file>", "undo", "git restore --staged --worktree <file>", "git restore --staged --worktree README.md", "Remove arquivo do staging e restaura working tree.", "Stage uma edição e execute em clone descartável.", "Edição staged e unstaged do arquivo desaparece.", "danger"),
+        c("git reset --hard", "undo", "git reset --hard", "git reset --hard HEAD", "Move HEAD e força index/working tree para commit.", "Somente em clone descartável após criar arquivo temporário.", "Mudanças locais não commitadas são descartadas.", "danger"),
+        c("git clean", "undo", "git clean", "git clean -n", "Remove arquivos untracked; preview com -n.", "Crie arquivo untracked e rode primeiro clean -n; não execute clean real em trabalho importante.", "Preview lista remoções; clean real apagaria untracked.", "danger"),
+        c("git stash", "stash", "git stash", "git stash push -m 'pause work'", "Guarda alterações locais temporariamente.", "Edite README, stash, confirme status limpo.", "Working tree limpa; entrada aparece em stash list."),
+        Object.assign(c("git stash list", "stash", "git stash list", "git stash list", "Lista entradas guardadas no stash.", "Depois de dois stash, liste entradas e identifique stash@{0}.", "Cada entrada aparece com índice, branch de origem e mensagem."), { supplemental: true }),
+        Object.assign(c("git stash apply", "stash", "git stash apply", "git stash apply stash@{0}", "Restaura stash sem remover entrada.", "Aplique stash e rode stash list novamente.", "Mudanças voltam ao working tree; entrada continua listada."), { supplemental: true }),
+        Object.assign(c("git stash pop", "stash", "git stash pop", "git stash pop stash@{0}", "Restaura stash e remove entrada se aplicação concluir.", "Em clone descartável, pop entrada recém-criada.", "Mudanças voltam; entrada aplicada sai da lista em caso de sucesso."), { supplemental: true }),
+        Object.assign(c("git stash drop", "stash", "git stash drop", "git stash drop stash@{0}", "Remove entrada stash sem restaurar conteúdo.", "Liste entradas, confirme índice, descarte uma entrada descartável.", "Entrada some; conteúdo não é aplicado."), { supplemental: true, danger: "warning" }),
+        c("git reset HEAD^", "undo", "git reset HEAD^", "git reset HEAD^", "Move branch um commit para trás mantendo arquivos no working tree.", "Em clone descartável, crie checkpoint e use reset HEAD^.", "Commit deixa de estar na branch; conteúdo reaparece como alteração.", "danger"),
+        c("git rebase -i HEAD~5", "merge", "git rebase -i HEAD~5", "git rebase -i HEAD~5", "Abre editor para reorganizar/squash últimos commits.", "Use cinco commits descartáveis; troque pick por fixup.", "Histórico local vira sequência menor; hashes mudam.", "danger"),
+        c("git reflog BRANCHNAME", "history", "git reflog BRANCHNAME", "git reflog main", "Mostra movimentos locais de referência da branch.", "Após reset em clone descartável, localize hash anterior.", "Entrada reflog aponta commit que branch já alcançou."),
+        c("git reset --hard <commit>", "undo", "git reset --hard <commit>", "git reset --hard HEAD@{1}", "Restaura branch e arquivos para commit escolhido.", "Use hash encontrado no reflog em clone descartável.", "Branch e arquivos voltam ao commit; mudanças não commitadas somem.", "danger"),
+        c("git commit --amend", "snapshot", "git commit --amend", "git commit --amend -m 'Correct message'", "Substitui último commit para corrigir mensagem ou incluir arquivo.", "Faça commit com typo; amend mensagem antes de compartilhar.", "Último commit recebe novo hash; não reescreva história compartilhada.", "warning"),
+        c("git log main", "history", "git log main", "git log main", "Mostra histórico da branch main.", "Compare log de main e feature.", "Commits da branch aparecem em ordem reversa."),
+        c("git log --graph main", "history", "git log --graph main", "git log --graph --decorate main", "Mostra histórico main com desenho de linhas.", "Faça merge e leia bifurcação.", "ASCII mostra caminhos e merge."),
+        c("git log --oneline", "history", "git log --oneline", "git log --oneline --decorate -5", "Resume um commit por linha.", "Liste últimos cinco commits.", "Hash curto + mensagem aparecem."),
+        c("git log <file>", "history", "git log <file>", "git log README.md", "Lista commits que tocaram arquivo.", "Descubra quando README mudou.", "Somente histórico relevante ao arquivo aparece."),
+        c("git log --follow <file>", "history", "git log --follow <file>", "git log --follow README.md", "Segue histórico do arquivo através de rename.", "Renomeie README e consulte histórico completo.", "Commits antes do rename também aparecem."),
+        c("git log -G banana", "history", "git log -G banana", "git log -G 'Recipe' -- README.md", "Encontra commits que adicionaram/removeram padrão textual.", "Busque palavra existente em histórico.", "Commits com alteração correspondente aparecem."),
+        c("git blame <file>", "history", "git blame <file>", "git blame README.md", "Mostra commit/autor associado a cada linha.", "Use em README para localizar origem de linha.", "Cada linha recebe referência e autor."),
+        c("git switch banana", "merge", "git switch banana", "git switch feature/demo", "Troca para branch banana do diagrama de referência.", "Crie feature/demo e use comando equivalente.", "Working tree passa a refletir branch escolhida."),
+        c("git rebase main", "merge", "git rebase main", "git switch feature/demo && git rebase main", "Reaplica commits de feature sobre ponta de main.", "Em clone descartável, avance main e faça rebase feature.", "Histórico linear; commits reaplicados recebem novos hashes.", "danger"),
+        c("git switch main", "merge", "git switch main", "git switch main", "Seleciona main como destino de integração.", "Antes de merge, confirme branch atual.", "branch --show-current imprime main."),
+        c("git merge banana", "merge", "git merge banana", "git merge feature/demo", "Integra branch nomeada na branch atual.", "Em main, merge feature/demo.", "Fast-forward ou merge commit; status explica conflito se houver."),
+        c("git merge --squash banana", "merge", "git merge --squash banana", "git merge --squash feature/demo", "Traz conteúdo sem trazer commits individuais; exige commit separado.", "Faça dois commits em feature e squash em main.", "Mudanças ficam staged/ready para um novo commit único.", "warning"),
+        c("git cherry-pick <commit>", "merge", "git cherry-pick <commit>", "git cherry-pick HEAD~1", "Copia mudança de commit para branch atual.", "Crie hotfix commit e cherry-pick em branch descartável.", "Novo commit com mudança equivalente aparece.", "warning"),
+        c("git checkout <commit> <file>", "undo", "git checkout <commit> <file>", "git checkout HEAD~1 -- README.md", "Forma legada para restaurar versão antiga de arquivo.", "Traga README do commit anterior em clone descartável.", "Working tree recebe versão antiga; prefira restore --source.", "warning", true),
+        c("git restore <file> --source <commit>", "undo", "git restore <file> --source <commit>", "git restore --source HEAD~1 -- README.md", "Restaura arquivo desde snapshot escolhido.", "Compare README atual com versão anterior e restaure em arquivo temporário.", "Arquivo recebe conteúdo antigo sem mover branch.", "warning"),
+        c("git remote add <name> <url>", "remote", "git remote add <name> <url>", "git remote add origin ../class-git-remote.git", "Registra nome e URL de repositório remoto.", "Adicione origin ao clone da aula e confira remote -v.", "origin aparece como fetch/push remoto."),
+        c("git push origin main", "remote", "git push origin main", "git push origin main", "Envia branch main ao remote origin.", "Após commit local, publique main no bare remote.", "Remote recebe commits de main."),
+        c("git push", "remote", "git push", "git push", "Envia branch atual ao upstream configurado.", "Depois do primeiro push -u, faça novo commit e use push simples.", "Remote atualiza sem repetir nome."),
+        c("git push -u origin <name>", "remote", "git push -u origin <name>", "git push -u origin feature/demo", "Publica branch nova e configura upstream.", "Publique feature/demo pela primeira vez.", "Remote branch criada; próximos pushes podem usar git push."),
+        c("git push --force-with-lease", "remote", "git push --force-with-lease", "git push --force-with-lease", "Reescreve remote somente se expectativa de estado ainda for válida.", "Somente leia e explique; não execute em repo compartilhado.", "Comando pode substituir histórico remoto; exige coordenação.", "danger"),
+        c("git push --tags", "remote", "git push --tags", "git push --tags", "Envia tags locais ao remote.", "Crie tag em clone local e publique em remote descartável.", "Tags locais chegam ao remote.", "warning"),
+        c("git fetch origin main", "remote", "git fetch origin main", "git fetch origin main", "Baixa estado de main sem integrar working tree.", "Colega faça push; rode fetch e compare origin/main.", "origin/main avança; arquivos locais não mudam."),
+        c("git pull --rebase", "remote", "git pull --rebase", "git pull --rebase", "Busca e reaplica commits locais sobre atualização remota.", "Use somente em clone descartável com histórico divergente.", "Histórico local reaplicado; resolva conflitos se surgirem.", "warning"),
+        c("git pull origin main", "remote", "git pull origin main", "git pull origin main", "Busca e integra main do remote.", "Sem divergência local, atualize clone após colega push.", "Working tree recebe commit remoto."),
+        c("git pull", "remote", "git pull", "git pull --ff-only", "Usa upstream configurado para buscar e integrar.", "Após configurar upstream, atualize clone com pull --ff-only.", "Branch local acompanha remote quando fast-forward possível."),
+        c("git config user.name 'Your Name'", "config", "git config user.name 'Your Name'", "git config user.name 'Seu Nome'", "Define nome no escopo local do repositório.", "Defina nome local e leia com git config user.name.", "Novo commit neste repo usa nome local.", "safe"),
+        c("git config --global ...", "config", "git config --global ...", "git config --global user.name 'Seu Nome'", "Define opção no escopo global do usuário.", "Configure user.name global e consulte valor.", "Repos futuros herdam configuração, salvo override local."),
+        c("git config alias.st status", "config", "git config alias.st status", "git config alias.st status", "Cria alias st para status.", "Configure e rode git st.", "git st executa git status."),
+        c("man git-config", "config", "man git-config", "git help config", "Abre documentação de configuração; git help config funciona em mais ambientes.", "Procure diferença entre --global e local.", "Manual explica escopos/opções; feche com q no man.", "safe")
+      ];
+
+      const GROUPS = {
+        fundamentos: "Começar e preparar",
+        snapshot: "Stage e commit",
+        branches: "Branches",
+        diff: "Diff e snapshots",
+        merge: "Merge e histórico divergente",
+        stash: "Stash",
+        undo: "Desfazer e restaurar",
+        history: "Histórico",
+        remote: "Remotes",
+        config: "Configuração"
+      };
+
+      const slides = Array.from(document.querySelectorAll(".slide"));
+      let currentIndex = 0;
+      let previousFocus = null;
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, function (char) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[char];
+        });
+      }
+
+      function dangerTag(level) {
+        if (level === "danger") return '<span class="tag danger">risco alto</span>';
+        if (level === "warning") return '<span class="tag warning">atenção</span>';
+        return '<span class="tag">seguro</span>';
+      }
+
+      function commandCard(item, index) {
+        const answerId = "answer-command-" + index;
+        const cardId = "command-" + index;
+        const legacy = item.legacy ? '<span class="tag warning">legado</span>' : "";
+        const supplemental = item.supplemental ? '<span class="tag">extra prático</span>' : "";
+        const warning = item.danger === "danger"
+          ? '<div class="instructor-note"><strong>Use clone descartável.</strong> Este comando pode apagar trabalho ou reescrever histórico.</div>'
+          : item.danger === "warning"
+            ? '<div class="instructor-note"><strong>Pause e confirme.</strong> Leia status e diff antes de executar em projeto importante.</div>'
+            : "";
+        return '<article class="command-card" id="' + cardId + '" data-danger="' + item.danger + '">' +
+          '<div class="command-card-top"><div><h3>' + escapeHtml(item.key) + '</h3>' + legacy + supplemental + dangerTag(item.danger) + '</div></div>' +
+          '<span class="syntax">Sintaxe: ' + escapeHtml(item.syntax) + '</span>' +
+          '<div class="example-row"><code>' + escapeHtml(item.example) + '</code><button class="copy-btn" type="button" data-copy="' + escapeHtml(item.example) + '">Copiar</button></div>' +
+          '<p><strong>Para quê:</strong> ' + escapeHtml(item.purpose) + '</p>' +
+          '<div class="exercise"><span class="exercise-label">Prática</span><p>' + escapeHtml(item.exercise) + '</p><button class="answer-toggle" type="button" aria-expanded="false" aria-controls="' + answerId + '">Revelar resultado</button><div class="answer-panel" id="' + answerId + '" hidden><span class="answer-label">Resultado esperado</span><p>' + escapeHtml(item.expected) + '</p></div></div>' +
+          warning +
+          '</article>';
+      }
+
+      function renderCommandCards() {
+        const count = document.getElementById("command-count");
+        if (count) count.textContent = COMMANDS.length;
+        document.querySelectorAll("[data-command-group]").forEach(function (container) {
+          const group = container.getAttribute("data-command-group");
+          const items = COMMANDS.filter(function (item) { return item.group === group; });
+          container.innerHTML = items.map(function (item) {
+            return commandCard(item, COMMANDS.indexOf(item));
+          }).join("");
+        });
+      }
+
+      function renderCoverage() {
+        const list = document.getElementById("coverage-list");
+        if (!list) return;
+        list.innerHTML = COMMANDS.map(function (item, index) {
+          const extra = item.supplemental ? ' · extra' : '';
+          return '<a class="coverage-item" href="#command-' + index + '" data-command-text="' + escapeHtml((item.key + " " + item.purpose + " " + item.exercise).toLowerCase()) + '" aria-label="Abrir lição para ' + escapeHtml(item.key) + '">' +
+            '<code>' + escapeHtml(item.key) + '</code><small>' + escapeHtml(GROUPS[item.group]) + extra + '</small></a>';
+        }).join("");
+        updateCoverageCount("");
+      }
+
+      function updateCoverageCount(filter) {
+        const query = filter.trim().toLowerCase();
+        let visible = 0;
+        document.querySelectorAll(".coverage-item").forEach(function (item) {
+          const match = !query || item.getAttribute("data-command-text").includes(query);
+          item.hidden = !match;
+          if (match) visible++;
+        });
+        const count = document.getElementById("coverage-count");
+        if (count) count.textContent = visible + " de " + COMMANDS.length + " lições";
+      }
+
+      function renderNav() {
+        const nav = document.getElementById("slide-nav");
+        nav.innerHTML = slides.map(function (slide, index) {
+          return '<button class="dot" type="button" data-slide-index="' + index + '" aria-label="Ir para ' + (index + 1) + ': ' + escapeHtml(slide.querySelector("h1,h2")?.textContent || slide.id) + '" aria-current="' + (index === 0 ? "true" : "false") + '"></button>';
+        }).join("");
+      }
+
+      function goToSlide(index, updateHash) {
+        if (!slides.length) return;
+        const next = Math.max(0, Math.min(index, slides.length - 1));
+        currentIndex = next;
+        slides.forEach(function (slide, i) {
+          const active = i === next;
+          slide.classList.toggle("is-active", active);
+          slide.setAttribute("aria-hidden", active ? "false" : "true");
+        });
+        document.querySelectorAll(".dot").forEach(function (dot, i) {
+          dot.setAttribute("aria-current", i === next ? "true" : "false");
+        });
+        const percent = slides.length <= 1 ? 100 : (next / (slides.length - 1)) * 100;
+        document.getElementById("progress-bar").style.width = percent + "%";
+        document.getElementById("progress-label").textContent = "Slide " + (next + 1) + " de " + slides.length;
+        document.getElementById("live-status").textContent = "Slide " + (next + 1) + " de " + slides.length;
+        document.getElementById("prev-btn").disabled = next === 0;
+        document.getElementById("next-btn").disabled = next === slides.length - 1;
+        if (updateHash !== false) history.replaceState(null, "", "#" + slides[next].id);
+        if (document.activeElement && document.activeElement.closest(".slide")) {
+          slides[next].focus({ preventScroll: true });
+        }
+        slides[next].scrollIntoView({ block: "start", behavior: "smooth" });
+      }
+
+      function goToHash() {
+        const hash = window.location.hash.replace(/^#/, "");
+        const index = slides.findIndex(function (slide) { return slide.id === hash; });
+        goToSlide(index >= 0 ? index : 0, false);
+      }
+
+      function copyText(text, button) {
+        const done = function () {
+          const original = button.textContent;
+          button.textContent = "Copiado";
+          document.getElementById("live-status").textContent = "Comando copiado";
+          window.setTimeout(function () { button.textContent = original; }, 1200);
+        };
+        const fallback = function () {
+          const area = document.createElement("textarea");
+          area.value = text;
+          area.style.position = "fixed";
+          area.style.opacity = "0";
+          document.body.appendChild(area);
+          area.select();
+          try { document.execCommand("copy"); done(); }
+          catch (error) { button.textContent = "Selecione manualmente"; }
+          area.remove();
+        };
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(text).then(done).catch(fallback);
+        } else {
+          fallback();
+        }
+      }
+
+      function toggleAnswer(button) {
+        const target = document.getElementById(button.getAttribute("aria-controls"));
+        if (!target) return;
+        const open = button.getAttribute("aria-expanded") !== "true";
+        button.setAttribute("aria-expanded", String(open));
+        target.hidden = !open;
+        button.textContent = open ? "Ocultar resultado" : "Revelar resultado";
+      }
+
+      function togglePresentation(force) {
+        const active = force === undefined ? !document.body.classList.contains("present-mode") : force;
+        document.body.classList.toggle("present-mode", active);
+        const button = document.getElementById("present-btn");
+        button.setAttribute("aria-pressed", String(active));
+        button.textContent = active ? "Sair" : "Apresentar";
+        if (!active) goToSlide(currentIndex, false);
+      }
+
+      function togglePrint(force) {
+        const active = force === undefined ? !document.body.classList.contains("print-preview") : force;
+        document.body.classList.toggle("print-preview", active);
+        const button = document.getElementById("print-btn");
+        button.setAttribute("aria-pressed", String(active));
+        button.textContent = active ? "Voltar" : "Imprimir";
+        document.getElementById("live-status").textContent = active ? "Modo impressão ativado" : "Modo impressão desativado";
+      }
+
+      function toggleHelp(show) {
+        const panel = document.getElementById("help-panel");
+        const backdrop = document.getElementById("backdrop");
+        panel.hidden = !show;
+        backdrop.hidden = !show;
+        if (show) {
+          previousFocus = document.activeElement;
+          document.getElementById("close-help").focus();
+        } else if (previousFocus) {
+          previousFocus.focus();
+          previousFocus = null;
+        }
+      }
+
+      function isEditable(target) {
+        return target && (target.matches("input, textarea, select, [contenteditable='true']") || target.closest("input, textarea, select, [contenteditable='true']"));
+      }
+
+      function bindEvents() {
+        document.addEventListener("click", function (event) {
+          const copy = event.target.closest("[data-copy]");
+          if (copy) {
+            copyText(copy.getAttribute("data-copy"), copy);
+            return;
+          }
+          const answer = event.target.closest(".answer-toggle");
+          if (answer) {
+            toggleAnswer(answer);
+            return;
+          }
+          const dot = event.target.closest("[data-slide-index]");
+          if (dot) {
+            goToSlide(Number(dot.getAttribute("data-slide-index")));
+            return;
+          }
+          const link = event.target.closest(".coverage-item");
+          if (link) {
+            event.preventDefault();
+            const card = document.getElementById(link.getAttribute("href").slice(1));
+            const parent = card && card.closest(".slide");
+            const slideIndex = slides.indexOf(parent);
+            if (slideIndex >= 0) {
+              window.setTimeout(function () {
+                goToSlide(slideIndex);
+                if (card) card.scrollIntoView({ block: "center", behavior: "smooth" });
+              }, 0);
+            }
+          }
+        });
+
+        document.getElementById("present-btn").addEventListener("click", function () { togglePresentation(); });
+        document.getElementById("print-btn").addEventListener("click", function () {
+          togglePrint(true);
+          window.setTimeout(function () { window.print(); }, 80);
+        });
+        document.getElementById("prev-btn").addEventListener("click", function () { goToSlide(currentIndex - 1); });
+        document.getElementById("next-btn").addEventListener("click", function () { goToSlide(currentIndex + 1); });
+        document.getElementById("help-btn").addEventListener("click", function () { toggleHelp(true); });
+        document.getElementById("close-help").addEventListener("click", function () { toggleHelp(false); });
+        document.getElementById("backdrop").addEventListener("click", function () { toggleHelp(false); });
+        document.getElementById("command-filter").addEventListener("input", function (event) { updateCoverageCount(event.target.value); });
+
+        document.addEventListener("keydown", function (event) {
+          if (isEditable(event.target)) return;
+          if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+            event.preventDefault();
+            goToSlide(currentIndex + 1);
+          } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
+            event.preventDefault();
+            goToSlide(currentIndex - 1);
+          } else if (event.key === "Home") {
+            event.preventDefault();
+            goToSlide(0);
+          } else if (event.key === "End") {
+            event.preventDefault();
+            goToSlide(slides.length - 1);
+          } else if (event.key === "?" ) {
+            event.preventDefault();
+            toggleHelp(true);
+          } else if (event.key.toLowerCase() === "p") {
+            event.preventDefault();
+            togglePrint();
+          } else if (event.key === "Escape") {
+            if (!document.getElementById("help-panel").hidden) toggleHelp(false);
+            else if (document.body.classList.contains("present-mode")) togglePresentation(false);
+            else if (document.body.classList.contains("print-preview")) togglePrint(false);
+          }
+        });
+
+        window.addEventListener("hashchange", goToHash);
+        window.addEventListener("afterprint", function () { togglePrint(false); });
+      }
+
+      renderCommandCards();
+      renderCoverage();
+      renderNav();
+      bindEvents();
+      goToHash();
+    }());
+  </script>
+</body>
+</html>
