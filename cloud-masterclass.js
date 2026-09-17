@@ -4,6 +4,30 @@
   const slides = Array.from(document.querySelectorAll(".slide"));
   let currentIndex = 0;
   let previousFocus = null;
+  let currentLanguage = "en-US";
+  const originalText = new WeakMap();
+  const translationNode = document.getElementById("i18n-data");
+  let pageTranslations = {};
+  try { pageTranslations = translationNode ? JSON.parse(translationNode.textContent) : {}; } catch (error) { pageTranslations = {}; }
+
+  const UI_PT = {
+    "Print": "Imprimir",
+    "Back": "Voltar",
+    "Present": "Apresentar",
+    "Exit": "Sair",
+    "Close": "Fechar",
+    "Controls": "Controles",
+    "navigate.": "navegue.",
+    "jump.": "avance.",
+    "opens help.": "abre ajuda.",
+    "toggles print.": "alterna impressão.",
+    "exits presentation.": "sai da apresentação.",
+    "Reveal answer": "Revelar resposta",
+    "Hide answer": "Ocultar resposta",
+    "Copied": "Copiado",
+    "Select manually": "Selecione manualmente",
+    "lessons": "lições"
+  };
 
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, function (char) {
@@ -34,8 +58,7 @@
     });
     const percent = slides.length <= 1 ? 100 : (next / (slides.length - 1)) * 100;
     document.getElementById("progress-bar").style.width = percent + "%";
-    document.getElementById("progress-label").textContent = "Slide " + (next + 1) + " of " + slides.length;
-    document.getElementById("live-status").textContent = "Slide " + (next + 1) + " of " + slides.length;
+    updateProgressLabel(next);
     document.getElementById("prev-btn").disabled = next === 0;
     document.getElementById("next-btn").disabled = next === slides.length - 1;
     if (updateHash !== false) history.replaceState(null, "", "#" + slides[next].id);
@@ -52,8 +75,8 @@
   function copyText(text, button) {
     const done = function () {
       const original = button.textContent;
-      button.textContent = "Copied";
-      document.getElementById("live-status").textContent = "Code copied";
+      button.textContent = currentLanguage === "pt-BR" ? "Copiado" : "Copied";
+      document.getElementById("live-status").textContent = currentLanguage === "pt-BR" ? "Código copiado" : "Code copied";
       window.setTimeout(function () { button.textContent = original; }, 1200);
     };
     const fallback = function () {
@@ -76,7 +99,9 @@
     const open = button.getAttribute("aria-expanded") !== "true";
     button.setAttribute("aria-expanded", String(open));
     target.hidden = !open;
-    button.textContent = open ? "Hide answer" : "Reveal answer";
+    button.textContent = open
+      ? (currentLanguage === "pt-BR" ? "Ocultar resposta" : "Hide answer")
+      : (currentLanguage === "pt-BR" ? "Revelar resposta" : "Reveal answer");
   }
 
   function updateFilter(value) {
@@ -88,7 +113,59 @@
       if (match) visible++;
     });
     const count = document.getElementById("coverage-count");
-    if (count) count.textContent = visible + " lessons";
+    if (count) count.textContent = visible + " " + (currentLanguage === "pt-BR" ? "lições" : "lessons");
+  }
+
+  function updateProgressLabel(index) {
+    const suffix = currentLanguage === "pt-BR" ? " de " : " of ";
+    const label = "Slide " + (index + 1) + suffix + slides.length;
+    document.getElementById("progress-label").textContent = label;
+    document.getElementById("live-status").textContent = label;
+  }
+
+  function preserveSpacing(original, replacement) {
+    const leading = (original.match(/^\s*/) || [""])[0];
+    const trailing = (original.match(/\s*$/) || [""])[0];
+    return leading + replacement + trailing;
+  }
+
+  function translatePage() {
+    const map = Object.assign({}, UI_PT, pageTranslations.ptBR || {});
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    let node;
+    while (node = walker.nextNode()) nodes.push(node);
+    nodes.forEach(function (textNode) {
+      if (textNode.parentElement && textNode.parentElement.closest("script, style, code, pre")) return;
+      if (!originalText.has(textNode)) originalText.set(textNode, textNode.nodeValue);
+      const source = originalText.get(textNode);
+      const key = source.trim();
+      const translated = currentLanguage === "pt-BR" ? map[key] : key;
+      if (translated) textNode.nodeValue = preserveSpacing(source, translated);
+      else if (currentLanguage === "en-US") textNode.nodeValue = source;
+    });
+    document.documentElement.lang = currentLanguage;
+    const languageButton = document.getElementById("lang-btn");
+    if (languageButton) {
+      languageButton.textContent = currentLanguage === "pt-BR" ? "EN-US" : "PT-BR";
+      languageButton.setAttribute("aria-pressed", String(currentLanguage === "pt-BR"));
+      languageButton.setAttribute("aria-label", currentLanguage === "pt-BR" ? "Switch to US English" : "Mudar para português do Brasil");
+    }
+    const filter = document.getElementById("deck-filter");
+    if (filter) {
+      const sourcePlaceholder = filter.getAttribute("data-en-placeholder") || filter.placeholder;
+      if (!filter.hasAttribute("data-en-placeholder")) filter.setAttribute("data-en-placeholder", sourcePlaceholder);
+      filter.placeholder = currentLanguage === "pt-BR" ? (map[sourcePlaceholder] || sourcePlaceholder) : sourcePlaceholder;
+      updateFilter(filter.value);
+    }
+    document.querySelectorAll(".copy-btn").forEach(function (button) { button.textContent = currentLanguage === "pt-BR" ? "Copiar" : "Copy"; });
+    document.querySelectorAll(".answer-toggle").forEach(function (button) {
+      const open = button.getAttribute("aria-expanded") === "true";
+      button.textContent = open
+        ? (currentLanguage === "pt-BR" ? "Ocultar resposta" : "Hide answer")
+        : (currentLanguage === "pt-BR" ? "Revelar resposta" : "Reveal answer");
+    });
+    updateProgressLabel(currentIndex);
   }
 
   function togglePresentation(force) {
@@ -96,7 +173,9 @@
     document.body.classList.toggle("present-mode", active);
     const button = document.getElementById("present-btn");
     button.setAttribute("aria-pressed", String(active));
-    button.textContent = active ? "Exit" : "Present";
+    button.textContent = active
+      ? (currentLanguage === "pt-BR" ? "Sair" : "Exit")
+      : (currentLanguage === "pt-BR" ? "Apresentar" : "Present");
     if (!active) goToSlide(currentIndex, false);
   }
 
@@ -105,7 +184,14 @@
     document.body.classList.toggle("print-preview", active);
     const button = document.getElementById("print-btn");
     button.setAttribute("aria-pressed", String(active));
-    button.textContent = active ? "Back" : "Print";
+    button.textContent = active
+      ? (currentLanguage === "pt-BR" ? "Voltar" : "Back")
+      : (currentLanguage === "pt-BR" ? "Imprimir" : "Print");
+  }
+
+  function toggleLanguage() {
+    currentLanguage = currentLanguage === "en-US" ? "pt-BR" : "en-US";
+    translatePage();
   }
 
   function toggleHelp(show) {
@@ -139,6 +225,7 @@
   });
 
   document.getElementById("present-btn").addEventListener("click", function () { togglePresentation(); });
+  document.getElementById("lang-btn").addEventListener("click", toggleLanguage);
   document.getElementById("print-btn").addEventListener("click", function () { togglePrint(true); window.setTimeout(function () { window.print(); }, 80); });
   document.getElementById("prev-btn").addEventListener("click", function () { goToSlide(currentIndex - 1); });
   document.getElementById("next-btn").addEventListener("click", function () { goToSlide(currentIndex + 1); });
@@ -169,4 +256,5 @@
   document.querySelectorAll(".coverage-item").forEach(function (item) { item.setAttribute("data-search", (item.textContent + " " + item.getAttribute("data-search")).toLowerCase()); });
   updateFilter("");
   goToHash();
+  translatePage();
 }());
