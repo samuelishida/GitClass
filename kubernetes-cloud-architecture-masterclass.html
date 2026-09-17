@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Kubernetes & Cloud Architecture Masterclass</title>
+  <link rel="stylesheet" href="cloud-masterclass.css">
+</head>
+<body>
+  <header class="app-chrome" aria-label="Presentation controls">
+    <div class="brand"><span class="brand-mark">K8s</span><span>Kubernetes / Cloud Architecture</span></div>
+    <div class="progress-wrap"><div class="progress-track"><div id="progress-bar"></div></div><span id="progress-label">Slide 1 of 14</span></div>
+    <div class="chrome-actions"><button class="icon-btn" id="prev-btn" type="button" aria-label="Previous slide">←</button><button class="icon-btn" id="next-btn" type="button" aria-label="Next slide">→</button><button class="icon-btn" id="help-btn" type="button" aria-label="Open help">?</button><button class="mode-btn" id="print-btn" type="button" aria-pressed="false">Print</button><button class="mode-btn" id="present-btn" type="button" aria-pressed="false">Present</button></div>
+  </header>
+  <div class="backdrop" id="backdrop" hidden></div>
+  <aside id="help-panel" hidden aria-labelledby="help-title"><h2 id="help-title">Controls</h2><p><code>←</code> <code>→</code> navigate. <code>Home</code>/<code>End</code> jump. <code>?</code> opens help. <code>P</code> toggles print. <code>Esc</code> exits presentation.</p><button class="nav-btn primary" id="close-help" type="button">Close</button></aside>
+  <main>
+    <section class="slide is-active" id="slide-cover" tabindex="-1" aria-labelledby="title-cover">
+      <div class="slide-inner">
+        <div class="hero-grid"><div><p class="kicker">Production platform engineering</p><h1 id="title-cover">Kubernetes + cloud architecture</h1><p class="lead">A focused, interview-ready mental model for designing, operating and debugging resilient Kubernetes platforms on AWS or any major cloud.</p></div><div class="panel"><span class="tag">14 lessons</span><span class="tag">EKS-aware</span><span class="tag">Offline</span><p>Learn the control plane, data plane, network path, security boundaries, failure modes and design trade-offs.</p></div></div>
+        <div class="metric-grid"><div class="metric"><strong>01</strong><span>Desired state</span></div><div class="metric"><strong>02</strong><span>Reliable platform</span></div><div class="metric"><strong>03</strong><span>Evidence under failure</span></div></div>
+        <div class="quote">Kubernetes is not a magic scheduler. It is a set of reconciliation loops operating through an API, backed by a distributed source of truth.</div>
+        <div class="slide-footer"><span>Use arrows or the dots to navigate</span><span>1 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-method" tabindex="-1" aria-labelledby="title-method">
+      <div class="slide-inner"><p class="kicker">01 / mental model</p><h2 id="title-method">Design from guarantees</h2><p class="lead">Start with user-visible guarantees, then choose Kubernetes and cloud primitives that make those guarantees testable.</p>
+        <div class="flow"><div class="flow-step"><strong>Load</strong><span>RPS, concurrency, payload</span></div><div class="flow-step"><strong>SLO</strong><span>Availability, latency, errors</span></div><div class="flow-step"><strong>State</strong><span>Stateless or durable</span></div><div class="flow-step"><strong>Failure</strong><span>AZ, node, dependency</span></div><div class="flow-step"><strong>Recovery</strong><span>RTO, RPO, rollback</span></div></div>
+        <div class="two-col"><div class="panel"><h3>Interview order</h3><p>Clarify requirements. Estimate traffic and data. Draw request flow. Define failure boundaries. Choose primitives. Explain observability, security, cost and operations.</p></div><div class="panel"><h3>Platform order</h3><p>Build a safe golden path: identity, networking, deployment, storage, telemetry, policy and recovery. Product teams consume it without reinventing controls.</p></div></div>
+        <div class="exercise"><span class="exercise-label">Quick drill</span><p>A service needs 99.95% availability, p95 under 250 ms, and recovery from one AZ failure. What must your design clarify first?</p><button class="answer-toggle" type="button" aria-expanded="false" aria-controls="answer-method">Reveal answer</button><div class="answer-panel" id="answer-method" hidden><strong>Answer:</strong> traffic shape, state ownership, dependency SLOs, RTO/RPO, AZ distribution and the exact user journey covered by the SLO. Capacity comes after the contract.</div></div>
+        <div class="slide-footer"><span>Requirements before resources</span><span>2 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-control-plane" tabindex="-1" aria-labelledby="title-control-plane">
+      <div class="slide-inner"><p class="kicker">02 / control plane</p><h2 id="title-control-plane">One API, many reconcilers</h2><p class="lead">The API server is the control-plane boundary. Controllers observe state and converge it toward the desired state.</p>
+        <div class="flow"><div class="flow-step"><strong>Client</strong><span>kubectl / platform</span></div><div class="flow-step"><strong>API server</strong><span>Auth, admission, API</span></div><div class="flow-step"><strong>etcd</strong><span>Source of truth</span></div><div class="flow-step"><strong>Controllers</strong><span>Reconcile state</span></div><div class="flow-step"><strong>Nodes</strong><span>Run workloads</span></div></div>
+        <div class="two-col"><div class="panel"><h3>Core components</h3><p><strong>kube-apiserver</strong> mediates every request. <strong>etcd</strong> stores cluster state. <strong>scheduler</strong> binds unscheduled pods. <strong>controller-manager</strong> maintains replicas and status. <strong>kubelet</strong> executes the pod contract.</p></div><div class="panel"><h3>EKS boundary</h3><p>AWS manages the Kubernetes control plane and its availability. You still own workload behavior, node capacity, IAM, networking, add-ons, policies, data and recovery.</p></div></div>
+        <div class="terminal"><div class="terminal-head"><span>Control-plane conversation</span><button class="copy-btn" type="button" data-copy="kubectl get deployment api -o yaml">Copy</button></div><pre><code>client → kube-apiserver → admission → etcd
+controller watch → compare desired/current → act through API
+kubelet → start containers → report status through API</code></pre></div>
+        <div class="slide-footer"><span>Controllers never need direct etcd access</span><span>3 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-workloads" tabindex="-1" aria-labelledby="title-workloads">
+      <div class="slide-inner"><p class="kicker">03 / workload primitives</p><h2 id="title-workloads">Choose the right controller</h2><p class="lead">The abstraction should match identity, lifecycle and storage semantics. A Deployment is not a universal answer.</p>
+        <div class="lesson-grid"><article class="lesson-card"><h3>Deployment</h3><span class="tag">stateless</span><p>ReplicaSet-backed rolling replacement for APIs and workers without stable identity.</p><div class="exercise"><span class="exercise-label">Ask</span><p>How do you prevent traffic reaching a pod before it is ready?</p><button class="answer-toggle" type="button" aria-expanded="false" aria-controls="answer-deploy">Reveal answer</button><div class="answer-panel" id="answer-deploy" hidden>Use a readiness probe. A Service selects only ready endpoints; startup probes protect slow initialization.</div></div></article><article class="lesson-card"><h3>StatefulSet</h3><span class="tag purple">identity</span><p>Stable network identity and ordered lifecycle for workloads that require it. Storage still needs an explicit backup story.</p></article><article class="lesson-card"><h3>DaemonSet</h3><span class="tag">per-node</span><p>One workload per eligible node: log agent, security sensor, or node-level telemetry.</p></article><article class="lesson-card"><h3>Job / CronJob</h3><span class="tag warning">finite work</span><p>Batch completion and scheduled work. Make jobs idempotent and bound retries.</p></article></div>
+        <div class="callout"><h3>Common interview trap</h3><p>“Kubernetes restarted the pod” is not the same as “the service recovered.” Verify readiness, endpoint removal, request success, latency and downstream effects.</p></div>
+        <div class="slide-footer"><span>Lifecycle semantics drive the controller</span><span>4 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-capacity" tabindex="-1" aria-labelledby="title-capacity">
+      <div class="slide-inner"><p class="kicker">04 / scheduling and capacity</p><h2 id="title-capacity">Resources are a contract</h2><p class="lead">Requests influence placement. Limits constrain execution. Autoscaling only works when signals and limits reflect reality.</p>
+        <div class="two-col"><div class="panel"><h3>Pod-level controls</h3><p><code>requests.cpu</code> and <code>requests.memory</code> shape scheduling. Limits protect a node but can cause throttling or OOMKills. Probes define availability, not capacity.</p><div class="terminal"><div class="terminal-head"><span>Minimal resource contract</span><button class="copy-btn" type="button" data-copy="resources:\n  requests:\n    cpu: 250m\n    memory: 256Mi\n  limits:\n    cpu: 1\n    memory: 512Mi">Copy</button></div><pre><code>resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi</code></pre></div></div><div class="panel"><h3>Placement controls</h3><p>Use taints/tolerations for dedicated capacity, affinity for locality, topology spread for failure-domain balance, and PodDisruptionBudgets for voluntary disruption.</p><div class="terminal"><div class="terminal-head"><span>Fast diagnosis</span><button class="copy-btn" type="button" data-copy="kubectl describe pod POD -n NAMESPACE">Copy</button></div><pre><code>kubectl top pods -A
+kubectl describe node NODE
+kubectl get pods -A -o wide</code></pre></div></div></div>
+        <div class="exercise"><span class="exercise-label">Quick drill</span><p>Pods are Pending while nodes show spare CPU. What do you inspect next?</p><button class="answer-toggle" type="button" aria-expanded="false" aria-controls="answer-capacity">Reveal answer</button><div class="answer-panel" id="answer-capacity" hidden>Memory, pod density, ENI/IP capacity, taints, affinity, topology constraints, PVC zone binding, quotas and scheduler events. “Spare CPU” is not proof of schedulability.</div></div>
+        <div class="slide-footer"><span>Placement is multidimensional</span><span>5 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-network" tabindex="-1" aria-labelledby="title-network">
+      <div class="slide-inner"><p class="kicker">05 / networking</p><h2 id="title-network">Trace the request path</h2><p class="lead">When traffic fails, walk one packet through every ownership boundary. DNS success proves almost nothing about application health.</p>
+        <div class="flow"><div class="flow-step"><strong>DNS</strong><span>Route 53</span></div><div class="flow-step"><strong>Edge</strong><span>CloudFront / WAF</span></div><div class="flow-step"><strong>LB</strong><span>ALB / NLB</span></div><div class="flow-step"><strong>Service</strong><span>ClusterIP / EndpointSlice</span></div><div class="flow-step"><strong>Pod</strong><span>App + dependency</span></div></div>
+        <div class="two-col"><div class="panel"><h3>Failure boundaries</h3><p>Security group, route table, NAT, VPC CNI, NetworkPolicy, target health, Service selector, readiness, sidecar and application listener. Check each boundary with evidence.</p></div><div class="panel"><h3>Interview vocabulary</h3><span class="tag">ClusterIP</span><span class="tag">NodePort</span><span class="tag">LoadBalancer</span><span class="tag">Ingress</span><span class="tag">Gateway API</span><span class="tag">EndpointSlice</span><span class="tag">CNI</span><span class="tag">NetworkPolicy</span></div></div>
+        <div class="terminal"><div class="terminal-head"><span>Network triage</span><button class="copy-btn" type="button" data-copy="kubectl get svc,ingress,endpointslice -n app">Copy</button></div><pre><code>kubectl get svc,ingress,endpointslice -n app
+kubectl describe ingress gateway -n app
+kubectl get networkpolicy -A
+aws elbv2 describe-target-health --target-group-arn ARN</code></pre></div>
+        <div class="slide-footer"><span>DNS → LB → target → Service → endpoint → pod</span><span>6 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-eks" tabindex="-1" aria-labelledby="title-eks">
+      <div class="slide-inner"><p class="kicker">06 / EKS architecture</p><h2 id="title-eks">Separate managed control from owned risk</h2><p class="lead">EKS removes control-plane operations, not platform engineering. Draw the AWS boundaries explicitly.</p>
+        <div class="flow"><div class="flow-step"><strong>Route 53</strong><span>DNS / failover</span></div><div class="flow-step"><strong>ALB</strong><span>Ingress / WAF</span></div><div class="flow-step"><strong>EKS API</strong><span>Managed control plane</span></div><div class="flow-step"><strong>Nodes</strong><span>EC2 / Karpenter</span></div><div class="flow-step"><strong>Data</strong><span>RDS / S3 / queues</span></div></div>
+        <div class="two-col"><div class="panel"><h3>AWS-managed</h3><p>Control-plane lifecycle, API server replicas and etcd operation. Validate endpoint access, version support, add-on compatibility and audit integration.</p></div><div class="panel"><h3>Team-owned</h3><p>Node groups, AMIs, Karpenter, IAM, VPC CNI, load balancer controller, storage drivers, policies, workloads, quotas, observability and recovery.</p></div></div>
+        <div class="exercise"><span class="exercise-label">Design question</span><p>Why can a healthy EKS control plane still have a production outage?</p><button class="answer-toggle" type="button" aria-expanded="false" aria-controls="answer-eks">Reveal answer</button><div class="answer-panel" id="answer-eks" hidden>Nodes, CNI/IP capacity, load balancer targets, security groups, storage, quotas, IAM, a bad rollout or a downstream dependency can fail while the API server remains healthy.</div></div>
+        <div class="slide-footer"><span>Managed control plane ≠ managed application</span><span>7 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-state" tabindex="-1" aria-labelledby="title-state">
+      <div class="slide-inner"><p class="kicker">07 / storage and state</p><h2 id="title-state">Keep state outside the blast radius</h2><p class="lead">Kubernetes can run stateful workloads. It does not make databases durable, consistent or backed up by default.</p>
+        <div class="lesson-grid"><article class="lesson-card"><h3>EBS</h3><p>Block storage, normally tied to one AZ. Use the EBS CSI driver and understand volume binding before scaling nodes across zones.</p></article><article class="lesson-card"><h3>EFS</h3><p>Shared filesystem semantics through the EFS CSI driver. Validate latency, throughput mode and application locking.</p></article><article class="lesson-card"><h3>S3</h3><p>Object storage for artifacts, backups and durable blobs. Use IAM conditions, encryption, lifecycle and replication deliberately.</p></article><article class="lesson-card"><h3>RDS / Aurora</h3><p>Prefer managed database primitives for critical state. Kubernetes owns connection policy and consumers, not database magic.</p></article></div>
+        <div class="table-wrap"><table><thead><tr><th>Question</th><th>What good design says</th><th>Evidence</th></tr></thead><tbody><tr><td>What if a pod dies?</td><td>Replica or restart; state remains external.</td><td>Recovery test and application metrics.</td></tr><tr><td>What if an AZ dies?</td><td>Replicated data and schedulable capacity remain.</td><td>AZ failure exercise, RTO/RPO.</td></tr><tr><td>What if data is corrupted?</td><td>Point-in-time restore and tested backups.</td><td>Restore drill with measured RTO.</td></tr></tbody></table></div>
+        <div class="slide-footer"><span>Durability must be demonstrated</span><span>8 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-security" tabindex="-1" aria-labelledby="title-security">
+      <div class="slide-inner"><p class="kicker">08 / security</p><h2 id="title-security">Identity follows the workload</h2><p class="lead">Avoid shared node credentials. Give each workload only the cloud actions it needs, then make that policy reviewable.</p>
+        <div class="two-col"><div class="panel"><h3>Identity chain</h3><p>Human → SSO role → Kubernetes RBAC → ServiceAccount → EKS Pod Identity or IRSA → IAM role → AWS API. Every hop needs an owner, audit trail and bounded permissions.</p><div class="terminal"><div class="terminal-head"><span>Useful check</span><button class="copy-btn" type="button" data-copy="kubectl auth can-i --list --as=system:serviceaccount:app:api -n app">Copy</button></div><pre><code>kubectl auth can-i --list \
+  --as=system:serviceaccount:app:api -n app</code></pre></div></div><div class="panel"><h3>Boundary controls</h3><span class="tag">RBAC</span><span class="tag">NetworkPolicy</span><span class="tag">Pod Security</span><span class="tag">KMS</span><span class="tag">Secrets Manager</span><span class="tag">CloudTrail</span><span class="tag">ECR scanning</span><p>Use policy-as-code in CI. Alert on wildcard permissions, public exposure, role changes and secret access anomalies.</p></div></div>
+        <div class="exercise"><span class="exercise-label">Quick drill</span><p>A pod needs to read one S3 prefix. Would you attach an admin policy to the node role?</p><button class="answer-toggle" type="button" aria-expanded="false" aria-controls="answer-security">Reveal answer</button><div class="answer-panel" id="answer-security" hidden>No. Use a workload identity role with a narrow resource ARN and prefix condition. Test access and log the role usage.</div></div>
+        <div class="slide-footer"><span>Least privilege is an architecture property</span><span>9 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-observe" tabindex="-1" aria-labelledby="title-observe">
+      <div class="slide-inner"><p class="kicker">09 / observability</p><h2 id="title-observe">Health is more than pod status</h2><p class="lead">Observe the user journey, the platform and the dependency graph. A green pod can serve a broken product.</p>
+        <div class="metric-grid"><div class="metric"><strong>SLI</strong><span>What users experience: success, latency, freshness</span></div><div class="metric"><strong>SLO</strong><span>Target reliability over a time window</span></div><div class="metric"><strong>Budget</strong><span>How much failure remains before action</span></div></div>
+        <div class="two-col"><div class="panel"><h3>Signals</h3><p>Metrics: Prometheus and CloudWatch. Logs: Fluent Bit and centralized storage. Traces: OpenTelemetry. Events: Kubernetes audit and object events. Profiles: only when evidence points to CPU/runtime cost.</p></div><div class="panel"><h3>Alert on symptoms</h3><p>Alert on availability, error rate, p95/p99 latency, queue age, restart rate, OOMKills, pending pods, node pressure, API latency and dependency failures. CPU alone is not an SLO.</p></div></div>
+        <div class="quote">Readiness answers “should this endpoint receive traffic?” Liveness answers “should this process be restarted?” Neither answers “is the user journey healthy?”</div>
+        <div class="slide-footer"><span>Start with SLOs, then instrument causes</span><span>10 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-delivery" tabindex="-1" aria-labelledby="title-delivery">
+      <div class="slide-inner"><p class="kicker">10 / delivery and reliability</p><h2 id="title-delivery">Make change reversible</h2><p class="lead">The safest deployment is one with a small blast radius, a clear signal and a known rollback.</p>
+        <div class="flow"><div class="flow-step"><strong>Test</strong><span>unit / contract</span></div><div class="flow-step"><strong>Scan</strong><span>image / policy</span></div><div class="flow-step"><strong>Stage</strong><span>smoke / load</span></div><div class="flow-step"><strong>Canary</strong><span>small exposure</span></div><div class="flow-step"><strong>Promote</strong><span>observe / rollback</span></div></div>
+        <div class="two-col"><div class="panel"><h3>Safety controls</h3><p>Immutable image tags, two-person production approval, PodDisruptionBudget, graceful shutdown, backward-compatible migrations, topology spread and automated rollback.</p></div><div class="panel"><h3>Scale controls</h3><p>HPA for workload demand, Karpenter or Cluster Autoscaler for nodes, queue-based backpressure and explicit quotas. Test cold start and scale-up time before the event.</p></div></div>
+        <div class="terminal"><div class="terminal-head"><span>Deployment evidence</span><button class="copy-btn" type="button" data-copy="kubectl rollout status deployment/api -n app --timeout=120s">Copy</button></div><pre><code>kubectl rollout status deployment/api -n app --timeout=120s
+kubectl rollout history deployment/api -n app
+kubectl rollout undo deployment/api -n app</code></pre></div>
+        <div class="slide-footer"><span>Fast rollback beats heroic debugging</span><span>11 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-debug" tabindex="-1" aria-labelledby="title-debug">
+      <div class="slide-inner"><p class="kicker">11 / production debugging</p><h2 id="title-debug">CrashLoopBackOff is a symptom</h2><p class="lead">Start from user impact, narrow the failing boundary, then inspect the previous process lifetime.</p>
+        <div class="flow"><div class="flow-step"><strong>Impact</strong><span>errors / latency</span></div><div class="flow-step"><strong>Scope</strong><span>namespace / AZ / version</span></div><div class="flow-step"><strong>Events</strong><span>scheduler / kubelet</span></div><div class="flow-step"><strong>Previous log</strong><span>last process</span></div><div class="flow-step"><strong>Fix</strong><span>rollback / config / capacity</span></div></div>
+        <div class="terminal"><div class="terminal-head"><span>Fast triage</span><button class="copy-btn" type="button" data-copy="kubectl get pods -n app; kubectl describe pod POD -n app; kubectl logs POD -n app --previous; kubectl get events -n app --sort-by=.lastTimestamp">Copy</button></div><pre><code>kubectl get pods -n app
+kubectl describe pod POD -n app
+kubectl logs POD -n app --previous
+kubectl get events -n app --sort-by=.lastTimestamp</code></pre></div>
+        <div class="lesson-grid"><article class="lesson-card"><h3>Exit 137</h3><p>Often memory pressure or OOMKilled. Check container and node memory, limit, working set and recent rollout.</p></article><article class="lesson-card"><h3>Probe failure</h3><p>Check startup time, endpoint semantics, dependency coupling and probe timeout. Do not use liveness as a dependency health check.</p></article><article class="lesson-card"><h3>Pending</h3><p>Inspect scheduler events, requests, taints, affinity, quotas, PVC topology and node/IP capacity.</p></article><article class="lesson-card"><h3>Healthy but slow</h3><p>Trace downstream calls, queues, connection pools, throttling, disk and network. Pod phase is not a latency metric.</p></article></div>
+        <div class="slide-footer"><span>Evidence before hypothesis</span><span>12 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-scenarios" tabindex="-1" aria-labelledby="title-scenarios">
+      <div class="slide-inner"><p class="kicker">12 / interview drills</p><h2 id="title-scenarios">Answer with trade-offs</h2><p class="lead">Strong answers expose assumptions, failure behavior and validation. They do not recite product names.</p>
+        <div class="lesson-grid"><article class="lesson-card"><h3>One AZ is down</h3><p>How does traffic move? Can pods schedule elsewhere? Is data available? What RTO is achieved?</p><button class="answer-toggle" type="button" aria-expanded="false" aria-controls="answer-az">Reveal answer</button><div class="answer-panel" id="answer-az" hidden>Multi-AZ nodes and topology spread preserve capacity; Route 53/ALB removes unhealthy targets; data needs independent replication; test the exact RTO.</div></article><article class="lesson-card"><h3>Pods are healthy, API is slow</h3><p>What do you inspect before adding replicas?</p><button class="answer-toggle" type="button" aria-expanded="false" aria-controls="answer-slow">Reveal answer</button><div class="answer-panel" id="answer-slow" hidden>Trace request path: load balancer, endpoints, app queues, connection pools, downstream latency, throttling, network and storage. Extra replicas can amplify a broken dependency.</div></article><article class="lesson-card"><h3>How do you secure AWS access?</h3><p>Describe the identity chain for one workload.</p><button class="answer-toggle" type="button" aria-expanded="false" aria-controls="answer-iam">Reveal answer</button><div class="answer-panel" id="answer-iam" hidden>ServiceAccount mapped to a least-privilege IAM role through Pod Identity or IRSA; secrets come from a managed store; CloudTrail and policy review provide evidence.</div></article><article class="lesson-card"><h3>How do you plan a peak?</h3><p>What proves the cluster will handle it?</p><button class="answer-toggle" type="button" aria-expanded="false" aria-controls="answer-peak">Reveal answer</button><div class="answer-panel" id="answer-peak" hidden>Historical load model, capacity test, quota check, warm-up time, scaling signals, dependency limits, dashboards, runbook and rollback.</div></article></div>
+        <div class="slide-footer"><span>Assumptions → design → failure → evidence</span><span>13 / 14</span></div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-capstone" tabindex="-1" aria-labelledby="title-capstone">
+      <div class="slide-inner"><p class="kicker">13 / capstone</p><h2 id="title-capstone">Design a production platform</h2><p class="lead">Put the pieces together: a multi-AZ EKS platform for an internal API with bursty traffic, sensitive data and an SLO.</p>
+        <div class="flow"><div class="flow-step"><strong>Route 53</strong><span>DNS + health</span></div><div class="flow-step"><strong>WAF / ALB</strong><span>edge + TLS</span></div><div class="flow-step"><strong>EKS</strong><span>multi-AZ workloads</span></div><div class="flow-step"><strong>RDS / S3</strong><span>managed state</span></div><div class="flow-step"><strong>Telemetry</strong><span>SLO + audit</span></div></div>
+        <div class="two-col"><div class="panel"><h3>Must explain</h3><p>Request path, identity, deployment strategy, resource requests, autoscaling, zone failure, database recovery, secret flow, alerts, quotas and cost controls.</p></div><div class="panel"><h3>Must test</h3><p>Load, pod loss, node loss, dependency timeout, failed rollout, AZ loss, restore from backup and alert delivery. Record RTO/RPO and user impact.</p></div></div>
+        <div class="quote">Mastery test: can you identify what fails, how it is detected, how it recovers, and how you prove the recovery?</div>
+        <div class="slide-footer"><span>Build it, break it, measure it</span><span>14 / 14</span></div>
+      </div>
+    </section>
+  </main>
+  <nav class="slide-nav" id="slide-nav" aria-label="Slide navigation"></nav>
+  <div class="sr-only" id="live-status" role="status" aria-live="polite"></div>
+  <script src="cloud-masterclass.js"></script>
+</body>
+</html>
