@@ -484,9 +484,9 @@
     .print-preview .slide-nav, .print-preview .app-chrome { display: none; }
 
     @media (max-width: 800px) {
-      .app-chrome { grid-template-columns: 1fr auto; }
-      .progress-wrap { grid-column: 1 / -1; grid-row: 2; }
-      .chrome-actions { justify-content: flex-end; }
+      .app-chrome { grid-template-columns: 1fr; }
+      .progress-wrap { grid-column: 1; grid-row: auto; }
+      .chrome-actions { justify-content: flex-start; flex-wrap: wrap; }
       .hero-grid, .two-col, .command-grid, .metric-grid { grid-template-columns: 1fr; }
       .coverage-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .flow { grid-template-columns: 1fr; }
@@ -576,6 +576,7 @@
       <button class="icon-btn" id="prev-btn" type="button" aria-label="Slide anterior">←</button>
       <button class="icon-btn" id="next-btn" type="button" aria-label="Próximo slide">→</button>
       <button class="icon-btn" id="help-btn" type="button" aria-label="Abrir ajuda de teclado">?</button>
+      <button class="mode-btn" id="lang-btn" type="button" aria-pressed="false" aria-label="Mudar para inglês americano">EN-US</button>
       <button class="mode-btn" id="print-btn" type="button" aria-pressed="false">Imprimir</button>
       <button class="mode-btn" id="present-btn" type="button" aria-pressed="false">Apresentar</button>
     </div>
@@ -954,9 +955,266 @@ git push -u origin feature/nome</pre></div>
         config: "Configuração"
       };
 
+      const EN_GROUPS = {
+        fundamentos: "Start and prepare",
+        snapshot: "Stage and commit",
+        branches: "Branches",
+        diff: "Diff and snapshots",
+        merge: "Merge and divergent history",
+        stash: "Stash",
+        undo: "Undo and restore",
+        history: "History",
+        remote: "Remotes",
+        config: "Configuration"
+      };
+
+      const EN_COMMANDS = {
+        "git init": { purpose: "Creates a Git repository in an existing folder.", exercise: "In an empty folder, initialize main and confirm the state.", expected: "A .git directory appears; no files are tracked; status reports a repository with no commits." },
+        "git clone <url>": { purpose: "Copies an existing repository, its history, and the origin remote.", exercise: "Clone a demo repository or the local bare remote.", expected: "The new folder contains history and origin is configured." },
+        "git add <file>": { purpose: "Puts a new file or changes into staging.", exercise: "Edit README and stage only that file.", expected: "README appears under Changes to be committed." },
+        "git add .": { purpose: "Stages visible changes below the current folder.", exercise: "Create README and notes; run add . and list everything staged.", expected: "All eligible files enter the next commit; review them first." },
+        "git add -p": { purpose: "Stages selected hunks from a file.", exercise: "Make two separate changes and accept only the first hunk.", expected: "One part appears in diff --staged; the other remains unstaged." },
+        "git mv <old> <new>": { purpose: "Moves or renames a file and records the operation.", exercise: "Rename notes.md and check status.", expected: "Status identifies the rename; the commit records the new name." },
+        "git rm <file>": { purpose: "Removes a file from the working tree and the next commit.", exercise: "Create, commit, and remove a disposable file with git rm.", expected: "The file leaves disk and appears as deleted and staged." },
+        "git rm --cached <file>": { purpose: "Stops tracking a file while keeping its local copy.", exercise: "Commit a disposable local file, add its pattern to .gitignore, then use rm --cached.", expected: "The file stays on disk but is no longer tracked." },
+        "git reset <file>": { purpose: "Legacy way to remove a file from staging without discarding its edits.", exercise: "Stage README and run reset README.", expected: "README becomes unstaged and its content remains." },
+        "git reset": { purpose: "Legacy way to remove everything from staging.", exercise: "Stage two files and clear the selection with reset.", expected: "Files remain edited or untracked; staging is empty." },
+        "git status": { purpose: "Shows the branch, files, and staging state.", exercise: "Run it after every change in the exercises.", expected: "The output guides the next step; use it as your primary diagnostic." },
+        "git commit": { purpose: "Creates a commit by opening the editor for its message.", exercise: "Stage README and create a commit without -m; write the message in the editor.", expected: "A new commit appears in the log; the editor closes with a valid message." },
+        "git commit -m 'message'": { purpose: "Creates a commit with an inline message.", exercise: "Stage a small change and use a specific message.", expected: "The commit is created and the working tree is clean." },
+        "git commit -am 'message'": { purpose: "Stages and commits tracked files; it does not include new untracked files.", exercise: "Edit a tracked file and create a new one; run -am and observe the difference.", expected: "The tracked edit enters the commit; the new file remains untracked." },
+        "git switch <name>": { purpose: "Switches to an existing branch.", exercise: "Create feature, then return to main with switch.", expected: "Files change to the snapshot recorded by main." },
+        "git checkout <name>": { purpose: "Legacy way to switch branches.", exercise: "Repeat the switch to main with checkout and compare it with switch.", expected: "The branch result is the same; prefer switch in new lessons." },
+        "git switch -c <name>": { purpose: "Creates and switches to a new branch.", exercise: "From a clean main, create feature/demo.", expected: "The new branch appears and becomes current." },
+        "git checkout -b <name>": { purpose: "Legacy way to create and switch to a branch.", exercise: "Create a temporary branch and confirm it with branch --show-current.", expected: "The branch is created and selected; switch -c is the modern form." },
+        "git branch": { purpose: "Lists local branches and marks the current one.", exercise: "List branches before and after creating feature.", expected: "The current branch receives a * marker." },
+        "git branch --sort=-committerdate": { purpose: "Lists branches by the date of their latest commit.", exercise: "Create two branches and compare their order after commits.", expected: "The branch with the newest commit appears first." },
+        "git branch -d <name>": { purpose: "Deletes a local branch that has already been merged.", exercise: "Merge feature into main and delete the old name.", expected: "The branch is removed; its commits remain reachable from main." },
+        "git branch -D <name>": { purpose: "Forces removal of a branch even when it is not merged.", exercise: "In a disposable clone, create an experiment and remove it with -D.", expected: "The name disappears; work unique to that branch may become hard to recover." },
+        "git diff HEAD": { purpose: "Compares the working tree and staging against HEAD.", exercise: "Edit and stage one file; compare diff with diff HEAD.", expected: "All changes since the last commit are shown." },
+        "git diff --staged": { purpose: "Shows only the content staged for the next commit.", exercise: "Stage one change and review its patch.", expected: "The patch contains only what the next commit would save." },
+        "git diff": { purpose: "Shows changes that are not staged.", exercise: "Edit a file without add and locate the changed line.", expected: "The patch appears; after add, it no longer appears in this command." },
+        "git show <commit>": { purpose: "Shows a commit, its metadata, and its patch.", exercise: "Inspect the latest commit with show HEAD.", expected: "The message and added or removed lines appear." },
+        "git diff <commit> <commit>": { purpose: "Compares the snapshots of two commits.", exercise: "Compare the current commit with the previous one.", expected: "The patch shows the difference between snapshots." },
+        "git diff <commit> <file>": { purpose: "Compares the current file with its version from a commit.", exercise: "Compare the current README with the previous commit.", expected: "Only README appears in the patch." },
+        "git diff <commit> --stat": { purpose: "Summarizes files and line counts for a diff.", exercise: "View the statistics for the latest commit.", expected: "A short output lists files and insertions or deletions." },
+        "git show <commit> --stat": { purpose: "Shows a commit with a statistical summary.", exercise: "Use it on the latest commit.", expected: "The message and file summary appear." },
+        "git restore <file>": { purpose: "Discards unstaged edits to a file.", exercise: "Make a temporary edit, check diff, then restore it.", expected: "The file returns to the index content; the uncommitted edit is gone." },
+        "git checkout HEAD <file>": { purpose: "Legacy way to restore a file from HEAD.", exercise: "In a disposable clone, edit README and restore it.", expected: "The local edit is discarded; prefer the modern restore command." },
+        "git restore --staged --worktree <file>": { purpose: "Removes a file from staging and restores its working tree.", exercise: "Stage an edit and run it in a disposable clone.", expected: "The file's staged and unstaged edit disappears." },
+        "git reset --hard": { purpose: "Moves HEAD and forces the index and working tree to a commit.", exercise: "Only run it in a disposable clone after creating a temporary file.", expected: "Uncommitted local changes are discarded." },
+        "git clean": { purpose: "Removes untracked files; preview with -n.", exercise: "Create an untracked file and run clean -n first; do not run real clean in important work.", expected: "The preview lists removals; real clean would delete untracked files." },
+        "git stash": { purpose: "Temporarily stores local changes.", exercise: "Edit README, stash it, and confirm a clean status.", expected: "The working tree is clean; an entry appears in stash list." },
+        "git stash list": { purpose: "Lists entries saved in the stash.", exercise: "After two stashes, list entries and identify stash@{0}.", expected: "Each entry shows its index, source branch, and message." },
+        "git stash apply": { purpose: "Restores a stash without removing its entry.", exercise: "Apply a stash and run stash list again.", expected: "Changes return to the working tree; the entry remains listed." },
+        "git stash pop": { purpose: "Restores a stash and removes its entry when apply succeeds.", exercise: "In a disposable clone, pop a newly created entry.", expected: "Changes return; the applied entry leaves the list on success." },
+        "git stash drop": { purpose: "Removes a stash entry without restoring its content.", exercise: "List entries, confirm the index, and drop a disposable entry.", expected: "The entry disappears; its content is not applied." },
+        "git reset HEAD^": { purpose: "Moves a branch back one commit while keeping files in the working tree.", exercise: "In a disposable clone, create a checkpoint and run reset HEAD^.", expected: "The commit leaves the branch; its content reappears as a change." },
+        "git rebase -i HEAD~5": { purpose: "Opens an editor to reorder or squash the last commits.", exercise: "Use five disposable commits and change pick to fixup.", expected: "Local history becomes shorter; hashes change." },
+        "git reflog BRANCHNAME": { purpose: "Shows local movements of a branch reference.", exercise: "After a reset in a disposable clone, locate the previous hash.", expected: "A reflog entry points to a commit the branch previously reached." },
+        "git reset --hard <commit>": { purpose: "Restores a branch and its files to a chosen commit.", exercise: "Use a hash found in reflog in a disposable clone.", expected: "The branch and files return to that commit; uncommitted changes disappear." },
+        "git commit --amend": { purpose: "Replaces the latest commit to fix its message or add a file.", exercise: "Create a commit with a typo and amend its message before sharing.", expected: "The latest commit gets a new hash; do not rewrite shared history." },
+        "git log main": { purpose: "Shows the history of the main branch.", exercise: "Compare the logs of main and feature.", expected: "Commits for the branch appear in reverse order." },
+        "git log --graph main": { purpose: "Shows main history with a graph of its lines.", exercise: "Create a merge and read the branch split.", expected: "ASCII output shows paths and the merge." },
+        "git log --oneline": { purpose: "Summarizes one commit per line.", exercise: "List the last five commits.", expected: "A short hash and message appear for each commit." },
+        "git log <file>": { purpose: "Lists commits that touched a file.", exercise: "Find when README changed.", expected: "Only the file's relevant history appears." },
+        "git log --follow <file>": { purpose: "Follows a file's history across a rename.", exercise: "Rename README and inspect its complete history.", expected: "Commits from before the rename also appear." },
+        "git log -G banana": { purpose: "Finds commits that added or removed a text pattern.", exercise: "Search for a word that exists in history.", expected: "Commits with a matching change appear." },
+        "git blame <file>": { purpose: "Shows the commit and author associated with each line.", exercise: "Use it on README to find the origin of a line.", expected: "Each line receives a reference and an author." },
+        "git switch banana": { purpose: "Switches to the banana branch from the reference diagram.", exercise: "Create feature/demo and use the equivalent command.", expected: "The working tree reflects the selected branch." },
+        "git rebase main": { purpose: "Replays feature commits on top of the tip of main.", exercise: "In a disposable clone, advance main and rebase feature.", expected: "History becomes linear; replayed commits get new hashes." },
+        "git switch main": { purpose: "Selects main as the integration destination.", exercise: "Confirm the current branch before merging.", expected: "branch --show-current prints main." },
+        "git merge banana": { purpose: "Integrates the named branch into the current branch.", exercise: "On main, merge feature/demo.", expected: "A fast-forward or merge commit occurs; status explains any conflict." },
+        "git merge --squash banana": { purpose: "Brings in content without individual commits; a separate commit is required.", exercise: "Make two feature commits and squash them into main.", expected: "Changes become staged and ready for one new commit." },
+        "git cherry-pick <commit>": { purpose: "Copies a commit's change onto the current branch.", exercise: "Create a hotfix commit and cherry-pick it in a disposable branch.", expected: "A new commit with an equivalent change appears." },
+        "git checkout <commit> <file>": { purpose: "Legacy way to restore an older version of a file.", exercise: "Bring README from the previous commit in a disposable clone.", expected: "The working tree receives the older version; prefer restore --source." },
+        "git restore <file> --source <commit>": { purpose: "Restores a file from a selected snapshot.", exercise: "Compare the current README with an older version and restore it to a temporary file.", expected: "The file receives old content without moving the branch." },
+        "git remote add <name> <url>": { purpose: "Registers a name and URL for a remote repository.", exercise: "Add origin to the class clone and check remote -v.", expected: "origin appears as a fetch and push remote." },
+        "git push origin main": { purpose: "Sends the main branch to the origin remote.", exercise: "After a local commit, publish main to the bare remote.", expected: "The remote receives main's commits." },
+        "git push": { purpose: "Sends the current branch to its configured upstream.", exercise: "After the first push -u, make another commit and use the simple push.", expected: "The remote updates without repeating the names." },
+        "git push -u origin <name>": { purpose: "Publishes a new branch and configures its upstream.", exercise: "Publish feature/demo for the first time.", expected: "The remote branch is created; later pushes can use git push." },
+        "git push --force-with-lease": { purpose: "Rewrites a remote only if its expected state is still valid.", exercise: "Read and explain it; do not run it in a shared repository.", expected: "The command can replace remote history and requires coordination." },
+        "git push --tags": { purpose: "Sends local tags to the remote.", exercise: "Create a tag locally and publish it to a disposable remote.", expected: "Local tags arrive at the remote." },
+        "git fetch origin main": { purpose: "Downloads main's state without integrating it into the working tree.", exercise: "Have a colleague push; run fetch and compare origin/main.", expected: "origin/main advances; local files do not change." },
+        "git pull --rebase": { purpose: "Fetches and replays local commits on top of the remote update.", exercise: "Use only in a disposable clone with divergent history.", expected: "Local history is replayed; resolve conflicts if they occur." },
+        "git pull origin main": { purpose: "Fetches and integrates main from the remote.", exercise: "With no local divergence, update the clone after a colleague pushes.", expected: "The working tree receives the remote commit." },
+        "git pull": { purpose: "Uses the configured upstream to fetch and integrate.", exercise: "After configuring upstream, update with pull --ff-only.", expected: "The local branch follows the remote when fast-forward is possible." },
+        "git config user.name 'Your Name'": { purpose: "Sets the name in the repository-local configuration scope.", exercise: "Set a local name and read it with git config user.name.", expected: "New commits in this repository use the local name." },
+        "git config --global ...": { purpose: "Sets an option in the user's global configuration scope.", exercise: "Configure a global user.name and read its value.", expected: "Future repositories inherit the setting unless locally overridden." },
+        "git config alias.st status": { purpose: "Creates an st alias for status.", exercise: "Configure it and run git st.", expected: "git st executes git status." },
+        "man git-config": { purpose: "Opens configuration documentation; git help config works in more environments.", exercise: "Look up the difference between global and local scopes.", expected: "The manual explains scopes and options; close man with q." }
+      };
+
+      const EN_STATIC = {
+        "Slide 1 de 14": "Slide 1 of 14",
+        "Imprimir": "Print",
+        "Apresentar": "Present",
+        "Copiar": "Copy",
+        "Atalhos": "Shortcuts",
+        "navegam.": "navigate.",
+        "vão ao início/fim.": "go to the beginning/end.",
+        "abre ajuda.": "opens help.",
+        "alterna impressão.": "toggles print mode.",
+        "sai do modo apresentação.": "exits presentation mode.",
+        "Fechar": "Close",
+        "Master class interativa · Git para iniciantes": "Interactive master class · Git for beginners",
+        "Uma aula prática para entender estado, histórico, branches, conflitos, stash e colaboração — comando por comando.": "A practical lesson on state, history, branches, conflicts, stash, and collaboration — one command at a time.",
+        "Como usar": "How to use",
+        "Avance pelos slides. Em cada card, execute exemplo em repositório descartável, depois revele resultado esperado.": "Move through the slides. In each card, run the example in a disposable repository, then reveal the expected result.",
+        "comandos catalogados": "cataloged commands",
+        "exercício por comando": "exercise per command",
+        "dependências externas": "external dependencies",
+        "Regra de ouro: antes de perguntar “qual comando?”, pergunte “em que estado está meu trabalho?”. Rode": "Rule of thumb: before asking “which command?”, ask “what state is my work in?”. Run",
+        "Use ← → para navegar": "Use ← → to navigate",
+        "01 · modelo mental": "01 · mental model",
+        "Git guarda snapshots locais.": "Git stores local snapshots.",
+        "Git não é GitHub. Git registra histórico no computador; GitHub é uma hospedagem e camada de colaboração.": "Git is not GitHub. Git records history on your computer; GitHub is hosting and a collaboration layer.",
+        "Editar": "Edit",
+        "histórico local": "local history",
+        "enviar": "send",
+        "receber + integrar": "receive + integrate",
+        "Três lugares": "Three places",
+        "Working tree:": "Working tree:",
+        "arquivos editáveis.": "editable files.",
+        "Staging:": "Staging:",
+        "conteúdo selecionado para próximo commit.": "content selected for the next commit.",
+        "Repository:": "Repository:",
+        "snapshots já salvos em": "snapshots already saved in",
+        "Três perguntas": "Three questions",
+        "— onde estou?": "— where am I?",
+        "— o que mudou?": "— what changed?",
+        "— o que será salvo?": "— what will be saved?",
+        "Exercício relâmpago": "Lightning exercise",
+        "Explique para colega por que": "Explain to a colleague why",
+        "não envia código para GitHub.": "does not send code to GitHub.",
+        "Revelar resposta": "Reveal answer",
+        "Resposta:": "Answer:",
+        "só move conteúdo para staging local.": "only moves content to local staging.",
+        "salva localmente.": "saves locally.",
+        "envia ao remote.": "sends to the remote.",
+        "Snapshot, não “salvamento mágico”": "A snapshot, not “magic saving”",
+        "02 · começar e preparar": "02 · start and prepare",
+        "Comece pequeno. Verifique estado.": "Start small. Check the state.",
+        "Cards abaixo cobrem inicialização, clone, staging, movimentação, remoção e identidade de arquivos.": "The cards below cover initialization, cloning, staging, moving, removal, and file identity.",
+        "Pré-requisito descartável": "Disposable prerequisite",
+        "Use pasta": "Use folder",
+        ". Para PowerShell, crie arquivos no editor; para Bash/Git Bash/macOS/Linux, use comandos exibidos nos cards.": ". For PowerShell, create files in an editor; for Bash/Git Bash/macOS/Linux, use the commands shown in the cards.",
+        "PowerShell:": "PowerShell:",
+        "rode": "run",
+        "e": "and",
+        "instrutor-led": "instructor-led",
+        "Execute um card, rode status, explique resultado": "Run one card, run status, explain the result",
+        "03 · commits": "03 · commits",
+        "Commit é checkpoint.": "A commit is a checkpoint.",
+        "Commit pequeno cria recuperação, revisão e contexto. Staging permite escolher exatamente o que entra.": "Small commits create recovery points, reviewability, and context. Staging lets you choose exactly what enters.",
+        "Rotina": "Routine",
+        "Teste de compreensão": "Comprehension check",
+        "Edite": "Edit",
+        "e crie": "and create",
+        ". Stage apenas README. Mostre diferenças staged e unstaged antes de commit.": ". Stage only README. Show staged and unstaged differences before committing.",
+        "mensagem: verbo + mudança": "message: verb + change",
+        "não: changes / stuff": "not: changes / stuff",
+        "Inspecione antes de salvar": "Inspect before saving",
+        "04 · branches": "04 · branches",
+        "Branch isola trabalho.": "A branch isolates work.",
+        "Branch é nome móvel apontando para commit. Confirme branch atual antes de mergear.": "A branch is a movable name pointing to a commit. Confirm the current branch before merging.",
+        "Destino de merge = branch atual": "Merge destination = current branch",
+        "05 · comparar": "05 · compare",
+        "Diff responde “o que mudou?”.": "Diff answers “what changed?”.",
+        "Compare working tree, staging, commits, arquivos específicos e estatísticas.": "Compare the working tree, staging, commits, specific files, and statistics.",
+        "Mapa": "Map",
+        ": não staged.": ": not staged.",
+        ": staged.": ": staged.",
+        ": tudo desde último commit.": ": everything since the last commit.",
+        "Referências": "References",
+        "= commit atual.": "= current commit.",
+        "= um commit antes.": "= one commit earlier.",
+        "= ponta local da branch.": "= local branch tip.",
+        "Leia patch, não só nome de arquivo": "Read the patch, not only the filename",
+        "06 · merge e conflito": "06 · merge and conflict",
+        "Conflito é pausa para decisão humana.": "A conflict is a pause for a human decision.",
+        "Git não escolhe quando duas branches alteram mesmo trecho de formas incompatíveis.": "Git cannot choose when two branches change the same lines incompatibly.",
+        "Resolver": "Resolve",
+        "abrir arquivo": "open the file",
+        "escolher texto final": "choose the final text",
+        "remover marcadores": "remove markers",
+        "Abandonar merge": "Abort merge",
+        "Se decisão não está pronta:": "If the decision is not ready:",
+        "não apague arquivo para escapar": "do not delete the file to escape",
+        "Conflito resolvido só após add + commit": "A conflict is resolved only after add + commit",
+        "07 · pausa temporária": "07 · temporary pause",
+        "Stash estaciona trabalho.": "Stash parks work.",
+        "Use quando precisa trocar branch com mudanças incompletas. Stash não substitui commit permanente.": "Use it when you need to switch branches with incomplete changes. Stash does not replace a permanent commit.",
+        "Exercício": "Exercise",
+        "Edite README sem commit. Rode": "Edit README without committing. Run",
+        ". Troque branch. Volte. Restaure com": ". Switch branches. Return. Restore with",
+        "Revelar resultado": "Reveal result",
+        "Resultado:": "Result:",
+        "stash limpa working tree e guarda entrada.": "stash clears the working tree and stores an entry.",
+        "restaura e mantém entrada na lista.": "restores and keeps the entry in the list.",
+        "restaura e remove entrada se aplicação concluir.": "restores and removes the entry if apply succeeds.",
+        "remove entrada sem restaurar.": "removes the entry without restoring it.",
+        "Antes de stash: status. Depois: status.": "Before stash: status. After: status.",
+        "08 · desfazer com segurança": "08 · undo safely",
+        "Onde está o erro?": "Where is the mistake?",
+        "Escolha comando pela camada: working tree, staging ou commit. Comandos destrutivos ficam em repositório descartável.": "Choose the command by layer: working tree, staging, or commit. Keep destructive commands in a disposable repository.",
+        "Estado": "State",
+        "Comando": "Command",
+        "Efeito": "Effect",
+        "Editado, não staged": "Edited, not staged",
+        "descarta edição local": "discards the local edit",
+        "Staged, não commit": "Staged, not committed",
+        "mantém edição, tira do próximo commit": "keeps the edit, removes it from the next commit",
+        "Commit compartilhado": "Shared commit",
+        "cria novo commit inverso": "creates a new inverse commit",
+        "Merge em andamento": "Merge in progress",
+        "retorna antes do merge": "returns to the state before the merge",
+        "e force push podem apagar ou reescrever trabalho. Primeiro faça checkpoint ou use clone descartável.": "and force push can delete or rewrite work. First create a checkpoint or use a disposable clone.",
+        "Commits ajudam recuperar; uncommitted pode sumir": "Commits help recovery; uncommitted work can disappear",
+        "09 · arqueologia": "09 · archaeology",
+        "Histórico conta história.": "History tells a story.",
+        "Use log para descobrir quando, onde e quem mudou algo. Use reflog como trilha local de recuperação.": "Use log to find when, where, and who changed something. Use reflog as a local recovery trail.",
+        "Não memorize hash: use referências": "Do not memorize hashes: use references",
+        "10 · remote": "10 · remote",
+        "Compartilhar = push. Receber = fetch/pull.": "Share = push. Receive = fetch/pull.",
+        "Remote pode ser GitHub ou um bare repository local. Aula usa local para evitar credencial e internet.": "A remote can be GitHub or a local bare repository. This lesson uses local infrastructure to avoid credentials and the internet.",
+        "Baixa informação e atualiza referências como": "Downloads information and updates references such as",
+        ". Não troca seus arquivos atuais.": ". It does not change your current files.",
+        "Busca e integra. Neste curso, prefira": "Fetches and integrates. In this course, prefer",
+        "quando local não divergiu.": "when local history has not diverged.",
+        "Commit antes de pull": "Commit before pull",
+        "11 · configuração": "11 · configuration",
+        "Configuração evita atrito.": "Configuration reduces friction.",
+        "Identidade vai no commit. Aliases reduzem digitação. Arquivos de configuração têm escopos diferentes.": "Identity goes into the commit. Aliases reduce typing. Configuration files have different scopes.",
+        "Setup inicial": "Initial setup",
+        "Arquivos importantes": "Important files",
+        "— repo atual.": "— current repository.",
+        "— global.": "— global.",
+        "— padrões compartilhados de arquivos ignorados.": "— shared patterns for ignored files.",
+        "Config global não é segredo": "Global config is not a secret",
+        "12 · catálogo": "12 · catalog",
+        "Cada comando tem prática.": "Every command has practice.",
+        "Filtre por comando, clique para abrir lição. Exemplos usam nomes concretos e seguros; sintaxes genéricas ficam apenas como referência.": "Filter by command and click to open a lesson. Examples use concrete, safe names; generic syntax is reference only.",
+        "Filtrar comandos": "Filter commands",
+        "Catálogo derivado de uma única lista canônica": "Catalog derived from one canonical list",
+        "13 · takeaway": "13 · takeaway",
+        "Status. Diff. Add. Commit.": "Status. Diff. Add. Commit.",
+        "Depois: branch, merge, push. Quando algo der errado: status primeiro.": "Next: branch, merge, push. When something goes wrong: status first.",
+        "Crie projeto pequeno, faça 2 commits, use .gitignore, crie feature branch, faça merge, entregue log + status limpo.": "Create a small project, make 2 commits, use .gitignore, create a feature branch, merge it, and deliver log + clean status.",
+        "Próxima aula": "Next lesson",
+        "Rebase, cherry-pick, tags, bisect, hooks e worktrees só depois de dominar estados e recuperação básica.": "Rebase, cherry-pick, tags, bisect, hooks, and worktrees come after mastering states and basic recovery.",
+        "Git não exige memória perfeita. Exige inspeção disciplinada.": "Git does not require perfect memory. It requires disciplined inspection.",
+        "Fontes para continuar": "Further reading",
+        "Git Cheat Sheet": "Git Cheat Sheet",
+        "GitHub: remotes": "GitHub: remotes",
+        "Fim da aula": "End of lesson"
+      };
+
       const slides = Array.from(document.querySelectorAll(".slide"));
       let currentIndex = 0;
       let previousFocus = null;
+      let currentLanguage = "pt-BR";
+      const originalText = new WeakMap();
 
       function escapeHtml(value) {
         return String(value).replace(/[&<>"']/g, function (char) {
@@ -964,28 +1222,71 @@ git push -u origin feature/nome</pre></div>
         });
       }
 
+      function commandView(item) {
+        return currentLanguage === "en-US" ? (EN_COMMANDS[item.key] || item) : item;
+      }
+
+      function label(pt, en) {
+        return currentLanguage === "en-US" ? en : pt;
+      }
+
+      function translateStatic() {
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+          const parent = node.parentElement;
+          if (!parent || parent.closest("script, style, code, pre, .command-card, .coverage-list")) continue;
+          if (!originalText.has(node)) originalText.set(node, node.nodeValue);
+          const source = originalText.get(node);
+          const trimmed = source.trim();
+          const translated = EN_STATIC[trimmed];
+          if (!translated || currentLanguage === "pt-BR") {
+            node.nodeValue = source;
+          } else {
+            node.nodeValue = source.replace(trimmed, translated);
+          }
+        }
+        document.documentElement.lang = currentLanguage;
+        document.title = currentLanguage === "en-US" ? "Git Masterclass — Beginners" : "Git Masterclass — Iniciantes";
+        document.querySelector(".app-chrome").setAttribute("aria-label", label("Controles da apresentação", "Presentation controls"));
+        document.getElementById("prev-btn").setAttribute("aria-label", label("Slide anterior", "Previous slide"));
+        document.getElementById("next-btn").setAttribute("aria-label", label("Próximo slide", "Next slide"));
+        document.getElementById("help-btn").setAttribute("aria-label", label("Abrir ajuda de teclado", "Open keyboard help"));
+        document.getElementById("slide-nav").setAttribute("aria-label", label("Navegação por slides", "Slide navigation"));
+        const langButton = document.getElementById("lang-btn");
+        langButton.textContent = currentLanguage === "en-US" ? "PT-BR" : "EN-US";
+        langButton.setAttribute("aria-label", currentLanguage === "en-US" ? "Switch to Brazilian Portuguese" : "Mudar para inglês americano");
+        langButton.setAttribute("aria-pressed", String(currentLanguage === "en-US"));
+        document.getElementById("command-filter").placeholder = label("Filtrar: stash, branch, diff...", "Filter: stash, branch, diff...");
+        document.getElementById("progress-label").textContent = label("Slide " + (currentIndex + 1) + " de " + slides.length, "Slide " + (currentIndex + 1) + " of " + slides.length);
+        document.getElementById("live-status").textContent = label("Slide " + (currentIndex + 1) + " de " + slides.length, "Slide " + (currentIndex + 1) + " of " + slides.length);
+        document.getElementById("present-btn").textContent = document.body.classList.contains("present-mode") ? label("Sair", "Exit") : label("Apresentar", "Present");
+        document.getElementById("print-btn").textContent = document.body.classList.contains("print-preview") ? label("Voltar", "Back") : label("Imprimir", "Print");
+      }
+
       function dangerTag(level) {
-        if (level === "danger") return '<span class="tag danger">risco alto</span>';
-        if (level === "warning") return '<span class="tag warning">atenção</span>';
-        return '<span class="tag">seguro</span>';
+        if (level === "danger") return '<span class="tag danger">' + label("risco alto", "high risk") + '</span>';
+        if (level === "warning") return '<span class="tag warning">' + label("atenção", "caution") + '</span>';
+        return '<span class="tag">' + label("seguro", "safe") + '</span>';
       }
 
       function commandCard(item, index) {
+        const view = commandView(item);
         const answerId = "answer-command-" + index;
         const cardId = "command-" + index;
-        const legacy = item.legacy ? '<span class="tag warning">legado</span>' : "";
-        const supplemental = item.supplemental ? '<span class="tag">extra prático</span>' : "";
+        const legacy = item.legacy ? '<span class="tag warning">' + label("legado", "legacy") + '</span>' : "";
+        const supplemental = item.supplemental ? '<span class="tag">' + label("extra prático", "practical extra") + '</span>' : "";
         const warning = item.danger === "danger"
-          ? '<div class="instructor-note"><strong>Use clone descartável.</strong> Este comando pode apagar trabalho ou reescrever histórico.</div>'
+          ? '<div class="instructor-note"><strong>' + label("Use clone descartável.", "Use a disposable clone.") + '</strong> ' + label("Este comando pode apagar trabalho ou reescrever histórico.", "This command can delete work or rewrite history.") + '</div>'
           : item.danger === "warning"
-            ? '<div class="instructor-note"><strong>Pause e confirme.</strong> Leia status e diff antes de executar em projeto importante.</div>'
+            ? '<div class="instructor-note"><strong>' + label("Pause e confirme.", "Pause and confirm.") + '</strong> ' + label("Leia status e diff antes de executar em projeto importante.", "Read status and diff before running it in important work.") + '</div>'
             : "";
         return '<article class="command-card" id="' + cardId + '" data-danger="' + item.danger + '">' +
           '<div class="command-card-top"><div><h3>' + escapeHtml(item.key) + '</h3>' + legacy + supplemental + dangerTag(item.danger) + '</div></div>' +
-          '<span class="syntax">Sintaxe: ' + escapeHtml(item.syntax) + '</span>' +
-          '<div class="example-row"><code>' + escapeHtml(item.example) + '</code><button class="copy-btn" type="button" data-copy="' + escapeHtml(item.example) + '">Copiar</button></div>' +
-          '<p><strong>Para quê:</strong> ' + escapeHtml(item.purpose) + '</p>' +
-          '<div class="exercise"><span class="exercise-label">Prática</span><p>' + escapeHtml(item.exercise) + '</p><button class="answer-toggle" type="button" aria-expanded="false" aria-controls="' + answerId + '">Revelar resultado</button><div class="answer-panel" id="' + answerId + '" hidden><span class="answer-label">Resultado esperado</span><p>' + escapeHtml(item.expected) + '</p></div></div>' +
+          '<span class="syntax">' + label("Sintaxe", "Syntax") + ': ' + escapeHtml(item.syntax) + '</span>' +
+          '<div class="example-row"><code>' + escapeHtml(item.example) + '</code><button class="copy-btn" type="button" data-copy="' + escapeHtml(item.example) + '">' + label("Copiar", "Copy") + '</button></div>' +
+          '<p><strong>' + label("Para quê", "Purpose") + ':</strong> ' + escapeHtml(view.purpose) + '</p>' +
+          '<div class="exercise"><span class="exercise-label">' + label("Prática", "Practice") + '</span><p>' + escapeHtml(view.exercise) + '</p><button class="answer-toggle" type="button" aria-expanded="false" aria-controls="' + answerId + '">' + label("Revelar resultado", "Reveal result") + '</button><div class="answer-panel" id="' + answerId + '" hidden><span class="answer-label">' + label("Resultado esperado", "Expected result") + '</span><p>' + escapeHtml(view.expected) + '</p></div></div>' +
           warning +
           '</article>';
       }
@@ -1006,9 +1307,11 @@ git push -u origin feature/nome</pre></div>
         const list = document.getElementById("coverage-list");
         if (!list) return;
         list.innerHTML = COMMANDS.map(function (item, index) {
-          const extra = item.supplemental ? ' · extra' : '';
-          return '<a class="coverage-item" href="#command-' + index + '" data-command-text="' + escapeHtml((item.key + " " + item.purpose + " " + item.exercise).toLowerCase()) + '" aria-label="Abrir lição para ' + escapeHtml(item.key) + '">' +
-            '<code>' + escapeHtml(item.key) + '</code><small>' + escapeHtml(GROUPS[item.group]) + extra + '</small></a>';
+          const view = commandView(item);
+          const extra = item.supplemental ? ' · ' + label("extra", "extra") : '';
+          const groups = currentLanguage === "en-US" ? EN_GROUPS : GROUPS;
+          return '<a class="coverage-item" href="#command-' + index + '" data-command-text="' + escapeHtml((item.key + " " + view.purpose + " " + view.exercise).toLowerCase()) + '" aria-label="' + label("Abrir lição para ", "Open lesson for ") + escapeHtml(item.key) + '">' +
+            '<code>' + escapeHtml(item.key) + '</code><small>' + escapeHtml(groups[item.group]) + extra + '</small></a>';
         }).join("");
         updateCoverageCount("");
       }
@@ -1022,7 +1325,7 @@ git push -u origin feature/nome</pre></div>
           if (match) visible++;
         });
         const count = document.getElementById("coverage-count");
-        if (count) count.textContent = visible + " de " + COMMANDS.length + " lições";
+        if (count) count.textContent = currentLanguage === "en-US" ? visible + " of " + COMMANDS.length + " lessons" : visible + " de " + COMMANDS.length + " lições";
       }
 
       function renderNav() {
@@ -1046,8 +1349,8 @@ git push -u origin feature/nome</pre></div>
         });
         const percent = slides.length <= 1 ? 100 : (next / (slides.length - 1)) * 100;
         document.getElementById("progress-bar").style.width = percent + "%";
-        document.getElementById("progress-label").textContent = "Slide " + (next + 1) + " de " + slides.length;
-        document.getElementById("live-status").textContent = "Slide " + (next + 1) + " de " + slides.length;
+        document.getElementById("progress-label").textContent = label("Slide " + (next + 1) + " de " + slides.length, "Slide " + (next + 1) + " of " + slides.length);
+        document.getElementById("live-status").textContent = label("Slide " + (next + 1) + " de " + slides.length, "Slide " + (next + 1) + " of " + slides.length);
         document.getElementById("prev-btn").disabled = next === 0;
         document.getElementById("next-btn").disabled = next === slides.length - 1;
         if (updateHash !== false) history.replaceState(null, "", "#" + slides[next].id);
@@ -1066,8 +1369,8 @@ git push -u origin feature/nome</pre></div>
       function copyText(text, button) {
         const done = function () {
           const original = button.textContent;
-          button.textContent = "Copiado";
-          document.getElementById("live-status").textContent = "Comando copiado";
+          button.textContent = label("Copiado", "Copied");
+          document.getElementById("live-status").textContent = label("Comando copiado", "Command copied");
           window.setTimeout(function () { button.textContent = original; }, 1200);
         };
         const fallback = function () {
@@ -1078,7 +1381,7 @@ git push -u origin feature/nome</pre></div>
           document.body.appendChild(area);
           area.select();
           try { document.execCommand("copy"); done(); }
-          catch (error) { button.textContent = "Selecione manualmente"; }
+          catch (error) { button.textContent = label("Selecione manualmente", "Select manually"); }
           area.remove();
         };
         if (navigator.clipboard && window.isSecureContext) {
@@ -1094,7 +1397,7 @@ git push -u origin feature/nome</pre></div>
         const open = button.getAttribute("aria-expanded") !== "true";
         button.setAttribute("aria-expanded", String(open));
         target.hidden = !open;
-        button.textContent = open ? "Ocultar resultado" : "Revelar resultado";
+        button.textContent = open ? label("Ocultar resultado", "Hide result") : label("Revelar resultado", "Reveal result");
       }
 
       function togglePresentation(force) {
@@ -1102,7 +1405,7 @@ git push -u origin feature/nome</pre></div>
         document.body.classList.toggle("present-mode", active);
         const button = document.getElementById("present-btn");
         button.setAttribute("aria-pressed", String(active));
-        button.textContent = active ? "Sair" : "Apresentar";
+        button.textContent = active ? label("Sair", "Exit") : label("Apresentar", "Present");
         if (!active) goToSlide(currentIndex, false);
       }
 
@@ -1111,8 +1414,17 @@ git push -u origin feature/nome</pre></div>
         document.body.classList.toggle("print-preview", active);
         const button = document.getElementById("print-btn");
         button.setAttribute("aria-pressed", String(active));
-        button.textContent = active ? "Voltar" : "Imprimir";
-        document.getElementById("live-status").textContent = active ? "Modo impressão ativado" : "Modo impressão desativado";
+        button.textContent = active ? label("Voltar", "Back") : label("Imprimir", "Print");
+        document.getElementById("live-status").textContent = active ? label("Modo impressão ativado", "Print mode enabled") : label("Modo impressão desativado", "Print mode disabled");
+      }
+
+      function toggleLanguage() {
+        currentLanguage = currentLanguage === "pt-BR" ? "en-US" : "pt-BR";
+        renderCommandCards();
+        renderCoverage();
+        translateStatic();
+        renderNav();
+        goToSlide(currentIndex, false);
       }
 
       function toggleHelp(show) {
@@ -1166,6 +1478,7 @@ git push -u origin feature/nome</pre></div>
         });
 
         document.getElementById("present-btn").addEventListener("click", function () { togglePresentation(); });
+        document.getElementById("lang-btn").addEventListener("click", toggleLanguage);
         document.getElementById("print-btn").addEventListener("click", function () {
           togglePrint(true);
           window.setTimeout(function () { window.print(); }, 80);
@@ -1213,6 +1526,7 @@ git push -u origin feature/nome</pre></div>
       renderNav();
       bindEvents();
       goToHash();
+      translateStatic();
     }());
   </script>
 </body>
